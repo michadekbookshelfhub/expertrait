@@ -39,7 +39,7 @@ export default function Profile() {
       <ScrollView>
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle" size={100} color="#007AFF" />
+            <Ionicons name="person-circle" size={100} color="#FF6B00" />
           </View>
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
@@ -50,7 +50,7 @@ export default function Profile() {
           
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="person-outline" size={24} color="#007AFF" />
+              <Ionicons name="person-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Edit Profile</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
@@ -58,7 +58,7 @@ export default function Profile() {
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="location-outline" size={24} color="#007AFF" />
+              <Ionicons name="location-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Saved Addresses</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
@@ -66,7 +66,7 @@ export default function Profile() {
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="card-outline" size={24} color="#007AFF" />
+              <Ionicons name="card-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Payment Methods</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
@@ -78,7 +78,7 @@ export default function Profile() {
           
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="notifications-outline" size={24} color="#007AFF" />
+              <Ionicons name="notifications-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Notifications</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
@@ -86,7 +86,7 @@ export default function Profile() {
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="language-outline" size={24} color="#007AFF" />
+              <Ionicons name="language-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Language</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
@@ -98,7 +98,7 @@ export default function Profile() {
           
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="help-circle-outline" size={24} color="#007AFF" />
+              <Ionicons name="help-circle-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Help Center</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
@@ -106,7 +106,7 @@ export default function Profile() {
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="document-text-outline" size={24} color="#007AFF" />
+              <Ionicons name="document-text-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Terms of Service</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
@@ -114,7 +114,7 @@ export default function Profile() {
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="shield-checkmark-outline" size={24} color="#007AFF" />
+              <Ionicons name="shield-checkmark-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Privacy Policy</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#CCC" />

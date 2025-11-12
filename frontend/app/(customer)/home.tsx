@@ -174,7 +174,7 @@ export default function Home() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#FF6B00" />
       </View>
     );
   }
@@ -265,13 +265,13 @@ export default function Home() {
                 </Text>
                 <View style={styles.modalDetails}>
                   <View style={styles.modalDetailRow}>
-                    <Ionicons name="cash-outline" size={20} color="#007AFF" />
+                    <Ionicons name="cash-outline" size={20} color="#FF6B00" />
                     <Text style={styles.modalDetailText}>
                       ${selectedService.fixed_price.toFixed(2)}
                     </Text>
                   </View>
                   <View style={styles.modalDetailRow}>
-                    <Ionicons name="time-outline" size={20} color="#007AFF" />
+                    <Ionicons name="time-outline" size={20} color="#FF6B00" />
                     <Text style={styles.modalDetailText}>
                       {selectedService.estimated_duration} minutes
                     </Text>
@@ -371,8 +371,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   categoryButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: '#FF6B00',
+    borderColor: '#FF6B00',
   },
   categoryText: {
     fontSize: 14,
@@ -388,22 +388,22 @@ const styles = StyleSheet.create({
   recommendationCard: {
     width: 150,
     padding: 16,
-    backgroundColor: '#007AFF10',
+    backgroundColor: '#FF6B0010',
     borderRadius: 12,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#007AFF30',
+    borderColor: '#FF6B0030',
   },
   recommendationName: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#FF6B00',
     marginBottom: 4,
   },
   recommendationPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#FF6B00',
   },
   servicesSection: {
     flex: 1,
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#FF6B00',
   },
   serviceDescription: {
     fontSize: 14,
@@ -456,8 +456,8 @@ const styles = StyleSheet.create({
   },
   serviceCategory: {
     fontSize: 12,
-    color: '#007AFF',
-    backgroundColor: '#007AFF10',
+    color: '#FF6B00',
+    backgroundColor: '#FF6B0010',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   bookButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B00',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

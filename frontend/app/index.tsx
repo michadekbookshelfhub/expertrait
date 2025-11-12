@@ -78,7 +78,7 @@ export default function Index() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#FF6B00" />
       </View>
     );
   }
@@ -285,19 +285,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   userTypeButtonActive: {
-    borderColor: '#007AFF',
-    backgroundColor: '#007AFF10',
+    borderColor: '#FF6B00',
+    backgroundColor: '#FF6B0010',
   },
   userTypeText: {
     fontSize: 14,
     color: '#666',
   },
   userTypeTextActive: {
-    color: '#007AFF',
+    color: '#FF6B00',
     fontWeight: 'bold',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B00',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchText: {
-    color: '#007AFF',
+    color: '#FF6B00',
     fontSize: 14,
   },
 });

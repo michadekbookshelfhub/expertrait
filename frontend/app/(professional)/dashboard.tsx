@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   },
   startButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B00',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',

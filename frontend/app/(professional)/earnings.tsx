@@ -92,7 +92,7 @@ export default function Earnings() {
 
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Ionicons name="calendar" size={24} color="#007AFF" />
+          <Ionicons name="calendar" size={24} color="#FF6B00" />
           <Text style={styles.statValue}>
             ${(totalEarnings / (bookings.length || 1)).toFixed(2)}
           </Text>

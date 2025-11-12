@@ -60,7 +60,7 @@ export default function Bookings() {
       case 'pending':
         return '#FFA500';
       case 'accepted':
-        return '#007AFF';
+        return '#FF6B00';
       case 'in_progress':
         return '#4CAF50';
       case 'completed':
@@ -148,7 +148,7 @@ export default function Bookings() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#FF6B00" />
       </View>
     );
   }
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#FF6B00',
   },
   statusContainer: {
     marginBottom: 12,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B00',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
