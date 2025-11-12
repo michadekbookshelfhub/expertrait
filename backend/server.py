@@ -772,8 +772,8 @@ async def create_or_update_banner(banner: BannerModel):
         await db.banners.update_many({}, {"$set": {"active": False}})
     
     result = await db.banners.insert_one(banner_dict)
-    banner_dict["id"] = str(result.inserted_id)
-    return {"message": "Banner created successfully", "banner": banner_dict}
+    created_banner = await db.banners.find_one({"_id": result.inserted_id})
+    return {"message": "Banner created successfully", "banner": serialize_doc(created_banner)}
 
 @api_router.get("/admin/banner/active")
 async def get_active_banner():
