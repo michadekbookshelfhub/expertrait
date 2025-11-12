@@ -1,15 +1,26 @@
-import { base44 } from './base44Client';
+import { expertraitClient } from "./expertraitClient";
 
+// Service Entity
+export const Service = {
+  list: (sort, limit) => expertraitClient.services.list(sort, limit),
+  get: (id) => expertraitClient.services.get(id),
+};
 
-export const Service = base44.entities.Service;
+// Category Entity
+export const Category = {
+  list: () => expertraitClient.categories.list(),
+};
 
-export const BlogPost = base44.entities.BlogPost;
+// User Entity
+export const User = {
+  login: (email, password) => expertraitClient.auth.login(email, password),
+  register: (userData) => expertraitClient.auth.register(userData),
+  logout: () => expertraitClient.auth.logout(),
+  getCurrentUser: () => expertraitClient.auth.getCurrentUser(),
+};
 
-export const ContactMessage = base44.entities.ContactMessage;
-
-export const Booking = base44.entities.Booking;
-
-
-
-// auth sdk:
-export const User = base44.auth;
+// Booking Entity
+export const Booking = {
+  create: (data) => expertraitClient.bookings.create(data),
+  list: (customerId) => expertraitClient.bookings.list(customerId),
+};
