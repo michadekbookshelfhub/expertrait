@@ -93,9 +93,11 @@ class APITester:
     
     async def test_register_professional(self):
         """Test professional registration"""
+        import time
+        timestamp = int(time.time())
         professional_data = {
             "name": "Mike Rodriguez",
-            "email": "mike.rodriguez@email.com",
+            "email": f"mike.rodriguez.{timestamp}@email.com",
             "password": "SecurePass123!",
             "phone": "+1-555-0456",
             "skills": ["Plumbing", "Electrical", "HVAC"],
