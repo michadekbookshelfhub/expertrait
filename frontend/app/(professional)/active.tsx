@@ -159,25 +159,18 @@ export default function Active() {
       </View>
 
       {location && (
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-          showsUserLocation
-        >
-          <Marker
-            coordinate={{
-              latitude: activeBooking.location.latitude,
-              longitude: activeBooking.location.longitude,
-            }}
-            title="Customer Location"
-            pinColor="red"
-          />
-        </MapView>
+        <View style={[styles.map, { backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' }]}>
+          <Ionicons name="map-outline" size={60} color="#999" />
+          <Text style={{ color: '#999', marginTop: 8, textAlign: 'center' }}>
+            Active Job Location Tracking
+          </Text>
+          <Text style={{ color: '#666', marginTop: 4, fontSize: 12, textAlign: 'center' }}>
+            Your location: {location.coords.latitude.toFixed(4)}, {location.coords.longitude.toFixed(4)}
+          </Text>
+          <Text style={{ color: '#666', marginTop: 2, fontSize: 12, textAlign: 'center' }}>
+            Customer: {activeBooking.location.latitude.toFixed(4)}, {activeBooking.location.longitude.toFixed(4)}
+          </Text>
+        </View>
       )}
 
       <View style={styles.controls}>
