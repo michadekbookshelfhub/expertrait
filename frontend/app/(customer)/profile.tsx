@@ -48,7 +48,7 @@ export default function Profile() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(customer)/edit-profile')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="person-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Edit Profile</Text>
@@ -56,7 +56,7 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(customer)/saved-addresses')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="location-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Saved Addresses</Text>
@@ -64,7 +64,7 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Coming Soon', 'Payment methods feature will be available soon')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="card-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Payment Methods</Text>
