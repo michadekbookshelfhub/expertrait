@@ -96,7 +96,7 @@ export default function Profile() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Help Center', 'Need help?\n\nEmail: support@expertrait.com\nPhone: 1-800-EXPERT\n\nAvailable 24/7')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="help-circle-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Help Center</Text>
@@ -104,7 +104,7 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Terms of Service', 'ExperTrait Terms of Service\n\nBy using our service, you agree to our terms and conditions.')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="document-text-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Terms of Service</Text>
@@ -112,7 +112,7 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Privacy Policy', 'ExperTrait Privacy Policy\n\nWe respect your privacy and protect your personal data.')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="shield-checkmark-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Privacy Policy</Text>
