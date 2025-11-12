@@ -9,11 +9,31 @@ import {
   SafeAreaView,
   RefreshControl,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
-import MapView, { Marker } from 'react-native-maps';
+
+// Platform-specific imports for react-native-maps
+let MapView: any;
+let Marker: any;
+
+if (Platform.OS !== 'web') {
+  const maps = require('react-native-maps');
+  MapView = maps.default;
+  Marker = maps.Marker;
+} else {
+  // Web fallback component
+  MapView = ({ children, style, ...props }: any) => (
+    <View style={[style, { backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' }]}>
+      <Ionicons name="map-outline" size={60} color="#999" />
+      <Text style={{ color: '#999', marginTop: 8 }}>Map not available on web</Text>
+      {children}
+    </View>
+  );
+  Marker = ({ children, ...props }: any) => <View>{children}</View>;
+}
 
 interface Booking {
   id: string;
