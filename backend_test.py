@@ -17,8 +17,8 @@ BACKEND_URL = "https://expertpro-2.preview.emergentagent.com/api"
 
 # Test credentials
 ADMIN_CREDENTIALS = {
-    "email": "admin@test.com",
-    "password": "password"
+    "email": "testadmin@test.com",
+    "password": "testpass123"
 }
 
 class APITester:
