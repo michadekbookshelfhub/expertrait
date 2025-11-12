@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the Oscar Home Services mobile app comprehensively. This is a dual-app platform with both Customer and Professional interfaces including authentication, services, booking workflow, professional management, and navigation."
+user_problem_statement: "Complete the ExperTrait home screen overhaul and build admin dashboard. Implement dynamic home screen with category icons, featured services, custom task highlight, service recommendations, and popular combinations. Build admin dashboard for managing banners, featured categories, and category icons."
 
 backend:
   - task: "Authentication System"
