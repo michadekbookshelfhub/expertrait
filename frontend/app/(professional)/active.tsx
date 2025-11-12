@@ -12,7 +12,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
-import { MapView, Marker } from '../../components/MapComponent';
 
 export default function Active() {
   const { user } = useAuth();
