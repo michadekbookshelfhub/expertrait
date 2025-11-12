@@ -191,51 +191,63 @@ backend:
 
   - task: "Admin Banner Management APIs"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Added admin APIs for managing promotional banners. Endpoints: POST /admin/banner (create), GET /admin/banner/active (get active), GET /admin/banners (list all), PUT /admin/banner/{id}/activate (activate), DELETE /admin/banner/{id} (delete). Ready for testing."
+        - working: true
+          agent: "testing"
+          comment: "All banner management APIs working correctly. Successfully tested: create multiple banners with only one active at a time, switch active banners, delete banners, get active/all banners. Fixed ObjectId serialization issue in banner creation endpoint. All 8 banner-related test cases passed."
 
   - task: "Admin Featured Categories APIs"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Added admin APIs for managing featured categories. Endpoints: POST /admin/featured-categories (set categories), GET /admin/featured-categories (get categories). Ready for testing."
+        - working: true
+          agent: "testing"
+          comment: "Featured categories APIs working correctly. Successfully tested: set featured categories, get featured categories with proper priority sorting, update categories (replace existing). All 4 featured category test cases passed."
 
   - task: "Admin Category Icons APIs"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Added admin APIs for managing category icons. Endpoints: POST /admin/category-icons (update icons), GET /admin/category-icons (get icons). Ready for testing."
+        - working: true
+          agent: "testing"
+          comment: "Category icons APIs working correctly. Successfully tested: update multiple category icons, get all category icons, update specific icon (upsert functionality). All 4 category icon test cases passed."
 
   - task: "Admin Stats API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Added admin API for platform statistics. Endpoint: GET /admin/stats. Returns total users, bookings, services, revenue, etc. Ready for testing."
+        - working: true
+          agent: "testing"
+          comment: "Admin stats API working correctly. Successfully returns all required statistics: total_users (22), total_customers (10), total_professionals (10), total_services (31), total_bookings (12), pending_bookings (3), completed_bookings (9), total_revenue (0). All data validation checks passed."
 
 frontend:
   - task: "Authentication Flow"
