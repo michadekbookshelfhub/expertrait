@@ -13,7 +13,7 @@ import sys
 import os
 
 # Backend URL from environment
-BACKEND_URL = "https://movie-awards.preview.emergentagent.com/api"
+BACKEND_URL = "https://expertpro-2.preview.emergentagent.com/api"
 
 class APITester:
     def __init__(self):
@@ -436,7 +436,7 @@ class APITester:
         
         payment_data = {
             "booking_id": self.test_data["booking"]["id"],
-            "origin_url": "https://movie-awards.preview.emergentagent.com"
+            "origin_url": "https://expertpro-2.preview.emergentagent.com"
         }
         
         success, response, status = await self.make_request("POST", "/checkout/session", payment_data)
