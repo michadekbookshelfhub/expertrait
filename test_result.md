@@ -404,7 +404,12 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "New Home Screen Components"
+    - "Category Navigation Flow"
+    - "Service Detail Screen"
+    - "Cart Functionality"
+    - "Custom Task Screen"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
