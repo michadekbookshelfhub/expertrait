@@ -63,6 +63,18 @@ export default function CustomerLayout() {
         }}
       />
       <Tabs.Screen
+        name="category-services"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="service-detail"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
         name="edit-profile"
         options={{
           href: null, // Hide from tabs
@@ -76,6 +88,12 @@ export default function CustomerLayout() {
       />
       <Tabs.Screen
         name="notifications-settings"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="home-old"
         options={{
           href: null, // Hide from tabs
         }}
