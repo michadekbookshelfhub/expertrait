@@ -93,9 +93,9 @@ export default function Index() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Ionicons name="home" size={60} color="#007AFF" />
-          <Text style={styles.title}>OSCAR</Text>
-          <Text style={styles.subtitle}>Home Services</Text>
+          <Ionicons name="briefcase" size={60} color="#FF6B00" />
+          <Text style={styles.title}>EXPERTRAIT</Text>
+          <Text style={styles.subtitle}>Professional Services Platform</Text>
         </View>
 
         <View style={styles.card}>
