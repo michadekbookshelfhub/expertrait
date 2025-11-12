@@ -437,8 +437,11 @@ async def update_professional_location(professional_id: str, location: LocationU
     return {"message": "Location updated successfully"}
 
 @api_router.patch("/professionals/{professional_id}/availability")
-async def update_availability(professional_id: str, available: bool):
+async def update_availability(professional_id: str, available: bool = None):
     """Toggle professional availability"""
+    if available is None:
+        raise HTTPException(status_code=400, detail="Available parameter is required")
+    
     await db.users.update_one(
         {"_id": ObjectId(professional_id)},
         {"$set": {"available": available}}
