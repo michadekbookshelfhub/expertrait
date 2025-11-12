@@ -3,20 +3,24 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
   ScrollView,
   SafeAreaView,
   Alert,
-  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import { api } from '../../services/api';
 import { useRouter } from 'expo-router';
 import PromoBanner from '../../components/PromoBanner';
+import CategoryIcons from '../../components/CategoryIcons';
+import CategoryHighlight from '../../components/CategoryHighlight';
+import CustomServiceHighlight from '../../components/CustomServiceHighlight';
+import BestCombinations from '../../components/BestCombinations';
+import PopularCombinations from '../../components/PopularCombinations';
 
 interface Service {
   id: string;
@@ -25,28 +29,23 @@ interface Service {
   description: string;
   fixed_price: number;
   estimated_duration: number;
+  image_base64?: string;
 }
 
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
+  const { addToCart, getCartCount } = useCart();
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [recommendations, setRecommendations] = useState<Service[]>([]);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [bookingModalVisible, setBookingModalVisible] = useState(false);
-  const [bookingLoading, setBookingLoading] = useState(false);
+  const [featuredCategory, setFeaturedCategory] = useState<string>('');
+  const [featuredServices, setFeaturedServices] = useState<Service[]>([]);
 
   useEffect(() => {
     loadData();
   }, []);
-
-  useEffect(() => {
-    loadServices();
-  }, [selectedCategory]);
 
   const loadData = async () => {
     try {
@@ -57,14 +56,18 @@ export default function Home() {
       setCategories(categoriesData.categories);
       setServices(servicesData);
 
-      // Load recommendations
-      if (user) {
-        try {
-          const recs = await api.getRecommendations(user.id);
-          setRecommendations(recs.recommendations || []);
-        } catch (error) {
-          console.error('Failed to load recommendations:', error);
-        }
+      // Select a random featured category
+      if (categoriesData.categories.length > 0) {
+        const randomCategory = categoriesData.categories[
+          Math.floor(Math.random() * categoriesData.categories.length)
+        ];
+        setFeaturedCategory(randomCategory);
+        
+        // Get services for featured category
+        const categoryServices = servicesData.filter(
+          (s: Service) => s.category === randomCategory
+        );
+        setFeaturedServices(categoryServices.slice(0, 8));
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -74,103 +77,24 @@ export default function Home() {
     }
   };
 
-  const loadServices = async () => {
-    try {
-      const data = await api.getServices(selectedCategory || undefined);
-      setServices(data);
-    } catch (error) {
-      console.error('Failed to load services:', error);
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      // Navigate to search results or filter services
+      // For now, just show alert
+      Alert.alert('Search', `Searching for: ${searchQuery}`);
     }
   };
 
-  const handleServicePress = (service: Service) => {
-    setSelectedService(service);
-    setBookingModalVisible(true);
-  };
-
-  const handleBookService = async () => {
-    if (!selectedService || !user) return;
-
-    setBookingLoading(true);
-    try {
-      const booking = await api.createBooking({
-        service_id: selectedService.id,
-        customer_id: user.id,
-        scheduled_time: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-        location: {
-          latitude: 37.7749,
-          longitude: -122.4194,
-        },
-        notes: '',
+  const handleAddMultipleToCart = (servicesToAdd: Service[]) => {
+    servicesToAdd.forEach((service) => {
+      addToCart({
+        id: service.id,
+        name: service.name,
+        fixed_price: service.fixed_price,
+        category: service.category,
       });
-
-      Alert.alert(
-        'Success',
-        'Booking created! Proceeding to payment...',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setBookingModalVisible(false);
-              router.push('/(customer)/bookings');
-            },
-          },
-        ]
-      );
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create booking');
-    } finally {
-      setBookingLoading(false);
-    }
+    });
   };
-
-  const filteredServices = services.filter((service) =>
-    service.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const renderCategoryButton = (category: string) => (
-    <TouchableOpacity
-      key={category}
-      style={[
-        styles.categoryButton,
-        selectedCategory === category && styles.categoryButtonActive,
-      ]}
-      onPress={() =>
-        setSelectedCategory(selectedCategory === category ? null : category)
-      }
-    >
-      <Text
-        style={[
-          styles.categoryText,
-          selectedCategory === category && styles.categoryTextActive,
-        ]}
-      >
-        {category}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  const renderServiceCard = ({ item }: { item: Service }) => (
-    <TouchableOpacity
-      style={styles.serviceCard}
-      onPress={() => handleServicePress(item)}
-    >
-      <View style={styles.serviceHeader}>
-        <Text style={styles.serviceName}>{item.name}</Text>
-        <Text style={styles.servicePrice}>${item.fixed_price.toFixed(2)}</Text>
-      </View>
-      <Text style={styles.serviceDescription} numberOfLines={2}>
-        {item.description}
-      </Text>
-      <View style={styles.serviceFooter}>
-        <Text style={styles.serviceDuration}>
-          <Ionicons name="time-outline" size={14} /> {item.estimated_duration}{' '}
-          min
-        </Text>
-        <Text style={styles.serviceCategory}>{item.category}</Text>
-      </View>
-    </TouchableOpacity>
-  );
 
   if (loading) {
     return (
@@ -182,11 +106,26 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Hi, {user?.name}!</Text>
-        <Text style={styles.headerSubtitle}>What do you need today?</Text>
+        <View>
+          <Text style={styles.headerTitle}>Hi, {user?.name}!</Text>
+          <Text style={styles.headerSubtitle}>What do you need today?</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.cartButton}
+          onPress={() => router.push('/(customer)/checkout')}
+        >
+          <Ionicons name="cart" size={24} color="#FF6B00" />
+          {getCartCount() > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{getCartCount()}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons
           name="search"
@@ -199,114 +138,55 @@ export default function Home() {
           placeholder="Search services..."
           value={searchQuery}
           onChangeText={setSearchQuery}
+          onSubmitEditing={handleSearchSubmit}
+          returnKeyType="search"
         />
       </View>
 
-      {/* Promo Banner */}
-      <PromoBanner
-        title="Limited Time Offer!"
-        subtitle="Get 20% off on your first booking"
-        buttonText="Book Now"
-      />
-
-      {recommendations.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recommended for You</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.recommendationsScroll}
-          >
-            {recommendations.map((service) => (
-              <TouchableOpacity
-                key={service.id}
-                style={styles.recommendationCard}
-                onPress={() => handleServicePress(service)}
-              >
-                <Text style={styles.recommendationName}>{service.name}</Text>
-                <Text style={styles.recommendationPrice}>
-                  ${service.fixed_price}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Categories</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesScroll}
-        >
-          {categories.map(renderCategoryButton)}
-        </ScrollView>
-      </View>
-
-      <View style={styles.servicesSection}>
-        <Text style={styles.sectionTitle}>
-          {selectedCategory || 'All Services'}
-        </Text>
-        <FlatList
-          data={filteredServices}
-          renderItem={renderServiceCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.servicesList}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
-
-      <Modal
-        visible={bookingModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setBookingModalVisible(false)}
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {selectedService && (
-              <>
-                <Text style={styles.modalTitle}>{selectedService.name}</Text>
-                <Text style={styles.modalDescription}>
-                  {selectedService.description}
-                </Text>
-                <View style={styles.modalDetails}>
-                  <View style={styles.modalDetailRow}>
-                    <Ionicons name="cash-outline" size={20} color="#FF6B00" />
-                    <Text style={styles.modalDetailText}>
-                      ${selectedService.fixed_price.toFixed(2)}
-                    </Text>
-                  </View>
-                  <View style={styles.modalDetailRow}>
-                    <Ionicons name="time-outline" size={20} color="#FF6B00" />
-                    <Text style={styles.modalDetailText}>
-                      {selectedService.estimated_duration} minutes
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.bookButton}
-                  onPress={handleBookService}
-                  disabled={bookingLoading}
-                >
-                  {bookingLoading ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <Text style={styles.bookButtonText}>Book Now</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setBookingModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
+        {/* Promo Banner */}
+        <PromoBanner
+          title="Limited Time Offer!"
+          subtitle="Get 20% off on your first booking"
+          buttonText="Book Now"
+        />
+
+        {/* Category Icons */}
+        <CategoryIcons categories={categories} />
+
+        {/* Featured Category */}
+        {featuredCategory && featuredServices.length > 0 && (
+          <CategoryHighlight 
+            category={featuredCategory}
+            services={featuredServices}
+          />
+        )}
+
+        {/* Custom Service Highlight */}
+        <CustomServiceHighlight />
+
+        {/* Best Combinations */}
+        {services.length > 0 && (
+          <BestCombinations
+            category={featuredCategory}
+            services={services.slice(0, 4)}
+            onAddToCart={handleAddMultipleToCart}
+          />
+        )}
+
+        {/* Popular Combinations */}
+        {services.length > 0 && (
+          <PopularCombinations
+            services={services.slice(0, 4)}
+            onAddToCart={handleAddMultipleToCart}
+          />
+        )}
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -322,6 +202,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 20,
     backgroundColor: '#FFF',
   },
@@ -335,11 +218,32 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  cartButton: {
+    position: 'relative',
+    padding: 8,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FF6B00',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
     margin: 16,
+    marginTop: 8,
     paddingHorizontal: 16,
     borderRadius: 12,
     shadowColor: '#000',
@@ -356,174 +260,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
   },
-  section: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  categoriesScroll: {
-    paddingHorizontal: 16,
-  },
-  categoryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#FFF',
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  categoryButtonActive: {
-    backgroundColor: '#FF6B00',
-    borderColor: '#FF6B00',
-  },
-  categoryText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  categoryTextActive: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-  recommendationsScroll: {
-    paddingHorizontal: 16,
-  },
-  recommendationCard: {
-    width: 150,
-    padding: 16,
-    backgroundColor: '#FF6B0010',
-    borderRadius: 12,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#FF6B0030',
-  },
-  recommendationName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FF6B00',
-    marginBottom: 4,
-  },
-  recommendationPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FF6B00',
-  },
-  servicesSection: {
+  scrollView: {
     flex: 1,
   },
-  servicesList: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  serviceCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  serviceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  serviceName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  servicePrice: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B00',
-  },
-  serviceDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-  },
-  serviceFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  serviceDuration: {
-    fontSize: 12,
-    color: '#999',
-  },
-  serviceCategory: {
-    fontSize: 12,
-    color: '#FF6B00',
-    backgroundColor: '#FF6B0010',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    minHeight: 300,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  modalDescription: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
-  },
-  modalDetails: {
-    marginBottom: 24,
-  },
-  modalDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  modalDetailText: {
-    fontSize: 16,
-    color: '#333',
-    marginLeft: 8,
-  },
-  bookButton: {
-    backgroundColor: '#FF6B00',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  bookButtonText: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    alignItems: 'center',
-    padding: 12,
-  },
-  cancelButtonText: {
-    color: '#999',
-    fontSize: 16,
+  bottomSpacer: {
+    height: 32,
   },
 });
