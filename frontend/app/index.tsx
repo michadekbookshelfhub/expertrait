@@ -102,26 +102,41 @@ export default function Index() {
           <Text style={styles.cardTitle}>
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </Text>
+          <Text style={styles.cardSubtitle}>
+            {isLogin 
+              ? 'Sign in to continue to ExperTrait' 
+              : 'Join our professional services platform'}
+          </Text>
 
           {!isLogin && (
             <>
-              <TextInput
-                style={styles.input}
-                placeholder="Full Name"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Phone Number"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  placeholderTextColor="#999"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your phone number"
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  placeholderTextColor="#999"
+                />
+              </View>
 
               <View style={styles.userTypeContainer}>
-                <Text style={styles.label}>I am a:</Text>
+                <Text style={styles.inputLabel}>Account Type</Text>
+                <Text style={styles.helperText}>Choose how you'll use ExperTrait</Text>
                 <View style={styles.userTypeButtons}>
                   <TouchableOpacity
                     style={[
@@ -130,6 +145,11 @@ export default function Index() {
                     ]}
                     onPress={() => setUserType('customer')}
                   >
+                    <Ionicons 
+                      name="person" 
+                      size={24} 
+                      color={userType === 'customer' ? '#FF6B00' : '#999'} 
+                    />
                     <Text
                       style={[
                         styles.userTypeText,
@@ -137,6 +157,9 @@ export default function Index() {
                       ]}
                     >
                       Customer
+                    </Text>
+                    <Text style={styles.userTypeDesc}>
+                      Book services
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -146,6 +169,11 @@ export default function Index() {
                     ]}
                     onPress={() => setUserType('professional')}
                   >
+                    <Ionicons 
+                      name="briefcase" 
+                      size={24} 
+                      color={userType === 'professional' ? '#FF6B00' : '#999'} 
+                    />
                     <Text
                       style={[
                         styles.userTypeText,
@@ -154,28 +182,44 @@ export default function Index() {
                     >
                       Professional
                     </Text>
+                    <Text style={styles.userTypeDesc}>
+                      Offer services
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </>
           )}
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholderTextColor="#999"
+            />
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholderTextColor="#999"
+            />
+            {!isLogin && (
+              <Text style={styles.helperText}>
+                Must be at least 8 characters
+              </Text>
+            )}
+          </View>
 
           <TouchableOpacity
             style={styles.button}
