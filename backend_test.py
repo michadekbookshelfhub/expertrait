@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Tests for Oscar Home Services
-Tests all endpoints with realistic data and proper error handling
+Comprehensive Backend API Tests for ExperTrait Home Services
+Tests all endpoints including new Admin APIs with realistic data and proper error handling
 """
 
 import asyncio
@@ -14,6 +14,12 @@ import os
 
 # Backend URL from environment
 BACKEND_URL = "https://expertpro-2.preview.emergentagent.com/api"
+
+# Test credentials
+ADMIN_CREDENTIALS = {
+    "email": "admin@test.com",
+    "password": "password"
+}
 
 class APITester:
     def __init__(self):
