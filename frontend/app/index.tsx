@@ -94,7 +94,11 @@ export default function Index() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Ionicons name="briefcase" size={60} color="#FF6B00" />
+          <Image 
+            source={require('../assets/images/explogo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>EXPERTRAIT</Text>
           <Text style={styles.subtitle}>Professional Services Platform</Text>
         </View>
