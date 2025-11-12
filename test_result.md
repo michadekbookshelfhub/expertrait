@@ -189,6 +189,54 @@ backend:
           agent: "testing"
           comment: "Stripe payment integration working correctly. Successfully creates checkout sessions with proper metadata and URLs. Payment transaction records are created in database."
 
+  - task: "Admin Banner Management APIs"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added admin APIs for managing promotional banners. Endpoints: POST /admin/banner (create), GET /admin/banner/active (get active), GET /admin/banners (list all), PUT /admin/banner/{id}/activate (activate), DELETE /admin/banner/{id} (delete). Ready for testing."
+
+  - task: "Admin Featured Categories APIs"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added admin APIs for managing featured categories. Endpoints: POST /admin/featured-categories (set categories), GET /admin/featured-categories (get categories). Ready for testing."
+
+  - task: "Admin Category Icons APIs"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added admin APIs for managing category icons. Endpoints: POST /admin/category-icons (update icons), GET /admin/category-icons (get icons). Ready for testing."
+
+  - task: "Admin Stats API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added admin API for platform statistics. Endpoint: GET /admin/stats. Returns total users, bookings, services, revenue, etc. Ready for testing."
+
 frontend:
   - task: "Authentication Flow"
     implemented: true
