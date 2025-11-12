@@ -122,7 +122,7 @@ class APITester:
             return
         
         login_data = {
-            "email": "sarah.johnson@email.com",
+            "email": self.test_data["customer"]["email"],
             "password": "SecurePass123!"
         }
         
