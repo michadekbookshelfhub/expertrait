@@ -49,7 +49,7 @@ export default function ProfilePro() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Edit Profile', 'Profile editing feature coming soon!')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="person-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Edit Profile</Text>
