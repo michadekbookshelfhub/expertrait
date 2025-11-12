@@ -28,6 +28,8 @@ import UserDashboard from "./UserDashboard";
 
 import HandlerDashboard from "./HandlerDashboard";
 
+import Admin from "./Admin";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -59,6 +61,8 @@ const PAGES = {
     UserDashboard: UserDashboard,
     
     HandlerDashboard: HandlerDashboard,
+    
+    Admin: Admin,
     
 }
 
