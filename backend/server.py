@@ -744,7 +744,7 @@ async def seed_services():
 # Root routes
 @api_router.get("/")
 async def root():
-    return {"message": "Oscar Home Services API", "version": "1.0.0"}
+    return {"message": "ExperTrait Home Services API", "version": "1.0.0"}
 
 @api_router.get("/health")
 async def health_check():
@@ -752,6 +752,15 @@ async def health_check():
 
 # Include the router in the main app
 app.include_router(api_router)
+
+# Serve landing page
+@app.get("/", response_class=HTMLResponse)
+async def landing_page():
+    website_path = Path(__file__).parent.parent / "website" / "index.html"
+    if website_path.exists():
+        with open(website_path, "r") as f:
+            return f.read()
+    return HTMLResponse("<h1>Welcome to ExperTrait</h1>")
 
 app.add_middleware(
     CORSMiddleware,
