@@ -264,10 +264,15 @@ async def get_services(category: Optional[str] = None):
 @api_router.get("/services/{service_id}", response_model=ServiceResponse)
 async def get_service(service_id: str):
     """Get a specific service by ID"""
-    service = await db.services.find_one({"_id": ObjectId(service_id)})
-    if not service:
-        raise HTTPException(status_code=404, detail="Service not found")
-    return ServiceResponse(**serialize_doc(service))
+    try:
+        service = await db.services.find_one({"_id": ObjectId(service_id)})
+        if not service:
+            raise HTTPException(status_code=404, detail="Service not found")
+        return ServiceResponse(**serialize_doc(service))
+    except Exception as e:
+        if "ObjectId" in str(e) or "invalid" in str(e).lower():
+            raise HTTPException(status_code=400, detail="Invalid service ID format")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @api_router.get("/categories")
 async def get_categories():
