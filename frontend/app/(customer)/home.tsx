@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { useRouter } from 'expo-router';
+import PromoBanner from '../../components/PromoBanner';
 
 interface Service {
   id: string;
