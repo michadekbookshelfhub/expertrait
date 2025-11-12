@@ -72,9 +72,11 @@ class APITester:
     
     async def test_register_customer(self):
         """Test customer registration"""
+        import time
+        timestamp = int(time.time())
         customer_data = {
             "name": "Sarah Johnson",
-            "email": "sarah.johnson@email.com",
+            "email": f"sarah.johnson.{timestamp}@email.com",
             "password": "SecurePass123!",
             "phone": "+1-555-0123",
             "address": "123 Main St, Springfield, IL 62701",
