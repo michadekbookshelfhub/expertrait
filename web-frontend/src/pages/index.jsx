@@ -119,6 +119,8 @@ function PagesContent() {
                 
                 <Route path="/HandlerDashboard" element={<HandlerDashboard />} />
                 
+                <Route path="/Admin" element={<Admin />} />
+                
             </Routes>
         </Layout>
     );
