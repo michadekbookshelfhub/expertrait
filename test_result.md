@@ -404,11 +404,7 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus:
-    - "Admin Banner Management APIs"
-    - "Admin Featured Categories APIs"
-    - "Admin Category Icons APIs"
-    - "Admin Stats API"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
