@@ -57,7 +57,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('My Skills', user?.skills?.join(', ') || 'No skills added yet')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="briefcase-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>My Skills</Text>
@@ -65,7 +65,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Payment Methods', 'Bank account and payment settings\n\nComing soon!')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="card-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Payment Methods</Text>
@@ -77,7 +77,7 @@ export default function ProfilePro() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Work</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Availability', `Current status: ${user?.available ? 'Available' : 'Unavailable'}\n\nToggle from the dashboard`)}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="time-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Availability</Text>
@@ -85,7 +85,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Service Areas', 'Manage your service coverage areas\n\nComing soon!')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="location-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Service Areas</Text>
@@ -93,7 +93,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Reviews', `Your Rating: ${user?.rating || 5.0} ⭐\n\nView all customer reviews`)}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="star-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Reviews</Text>
@@ -105,7 +105,7 @@ export default function ProfilePro() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Notifications', 'Job alerts and updates\n\nComing soon!')}>
             <View style={styles.menuItemLeft}>
               <Ionicons
                 name="notifications-outline"
@@ -117,7 +117,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Language', 'English (US)\n\nMore languages coming soon!')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="language-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Language</Text>
@@ -129,7 +129,7 @@ export default function ProfilePro() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Help Center', 'Need help?\n\nEmail: professional@expertrait.com\nPhone: 1-800-PRO-HELP\n\nAvailable 24/7')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="help-circle-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Help Center</Text>
@@ -137,7 +137,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Terms of Service', 'ExperTrait Professional Terms\n\nProfessional service provider agreement and guidelines.')}>
             <View style={styles.menuItemLeft}>
               <Ionicons
                 name="document-text-outline"
@@ -149,7 +149,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Privacy Policy', 'ExperTrait Privacy Policy\n\nWe protect your professional information and data.')}>
             <View style={styles.menuItemLeft}>
               <Ionicons
                 name="shield-checkmark-outline"
