@@ -741,6 +741,185 @@ async def seed_services():
     await db.services.insert_many(services)
     return {"message": f"Successfully seeded {len(services)} services"}
 
+
+# ==================== Admin APIs ====================
+
+class BannerModel(BaseModel):
+    title: str
+    subtitle: str
+    button_text: str
+    active: bool = True
+    created_at: Optional[datetime] = None
+
+class FeaturedCategoryModel(BaseModel):
+    category: str
+    priority: int = 0
+    active: bool = True
+
+class CategoryIconModel(BaseModel):
+    category: str
+    icon: str
+    color: str
+
+@api_router.post("/admin/banner")
+async def create_or_update_banner(banner: BannerModel):
+    """Create or update promotional banner"""
+    banner_dict = banner.dict()
+    banner_dict["created_at"] = datetime.utcnow()
+    
+    # Deactivate all existing banners if this one is active
+    if banner.active:
+        await db.banners.update_many({}, {"$set": {"active": False}})
+    
+    result = await db.banners.insert_one(banner_dict)
+    banner_dict["id"] = str(result.inserted_id)
+    return {"message": "Banner created successfully", "banner": banner_dict}
+
+@api_router.get("/admin/banner/active")
+async def get_active_banner():
+    """Get currently active banner"""
+    banner = await db.banners.find_one({"active": True}, sort=[("created_at", -1)])
+    if not banner:
+        return {"banner": None}
+    
+    banner["id"] = str(banner["_id"])
+    del banner["_id"]
+    return {"banner": banner}
+
+@api_router.get("/admin/banners")
+async def get_all_banners():
+    """Get all banners"""
+    banners = []
+    async for banner in db.banners.find().sort("created_at", -1):
+        banner["id"] = str(banner["_id"])
+        del banner["_id"]
+        banners.append(banner)
+    return {"banners": banners}
+
+@api_router.put("/admin/banner/{banner_id}/activate")
+async def activate_banner(banner_id: str):
+    """Activate a specific banner"""
+    if not ObjectId.is_valid(banner_id):
+        raise HTTPException(status_code=400, detail="Invalid banner ID")
+    
+    # Deactivate all banners
+    await db.banners.update_many({}, {"$set": {"active": False}})
+    
+    # Activate the specified banner
+    result = await db.banners.update_one(
+        {"_id": ObjectId(banner_id)},
+        {"$set": {"active": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Banner not found")
+    
+    return {"message": "Banner activated successfully"}
+
+@api_router.delete("/admin/banner/{banner_id}")
+async def delete_banner(banner_id: str):
+    """Delete a banner"""
+    if not ObjectId.is_valid(banner_id):
+        raise HTTPException(status_code=400, detail="Invalid banner ID")
+    
+    result = await db.banners.delete_one({"_id": ObjectId(banner_id)})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Banner not found")
+    
+    return {"message": "Banner deleted successfully"}
+
+@api_router.post("/admin/featured-categories")
+async def set_featured_categories(categories: List[FeaturedCategoryModel]):
+    """Set featured categories"""
+    # Clear existing featured categories
+    await db.featured_categories.delete_many({})
+    
+    # Insert new ones
+    categories_dict = [cat.dict() for cat in categories]
+    for cat in categories_dict:
+        cat["created_at"] = datetime.utcnow()
+    
+    if categories_dict:
+        await db.featured_categories.insert_many(categories_dict)
+    
+    return {"message": f"Featured categories updated ({len(categories_dict)} categories)"}
+
+@api_router.get("/admin/featured-categories")
+async def get_featured_categories():
+    """Get featured categories"""
+    categories = []
+    async for cat in db.featured_categories.find({"active": True}).sort("priority", -1):
+        cat["id"] = str(cat["_id"])
+        del cat["_id"]
+        categories.append(cat)
+    return {"categories": categories}
+
+@api_router.post("/admin/category-icons")
+async def update_category_icons(icons: List[CategoryIconModel]):
+    """Update category icons"""
+    for icon_model in icons:
+        await db.category_icons.update_one(
+            {"category": icon_model.category},
+            {"$set": icon_model.dict()},
+            upsert=True
+        )
+    
+    return {"message": f"Updated {len(icons)} category icons"}
+
+@api_router.get("/admin/category-icons")
+async def get_category_icons():
+    """Get all category icons"""
+    icons = []
+    async for icon in db.category_icons.find():
+        icon["id"] = str(icon["_id"])
+        del icon["_id"]
+        icons.append(icon)
+    return {"icons": icons}
+
+@api_router.get("/admin/stats")
+async def get_admin_stats():
+    """Get platform statistics"""
+    total_users = await db.users.count_documents({})
+    total_customers = await db.users.count_documents({"user_type": "customer"})
+    total_professionals = await db.users.count_documents({"user_type": "professional"})
+    total_services = await db.services.count_documents({})
+    total_bookings = await db.bookings.count_documents({})
+    pending_bookings = await db.bookings.count_documents({"status": "pending"})
+    completed_bookings = await db.bookings.count_documents({"status": "completed"})
+    
+    # Calculate total revenue
+    revenue_pipeline = [
+        {"$match": {"status": "completed"}},
+        {"$lookup": {
+            "from": "services",
+            "localField": "service_id",
+            "foreignField": "_id",
+            "as": "service"
+        }},
+        {"$unwind": "$service"},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": "$service.fixed_price"}
+        }}
+    ]
+    
+    revenue_result = await db.bookings.aggregate(revenue_pipeline).to_list(1)
+    total_revenue = revenue_result[0]["total"] if revenue_result else 0
+    
+    return {
+        "stats": {
+            "total_users": total_users,
+            "total_customers": total_customers,
+            "total_professionals": total_professionals,
+            "total_services": total_services,
+            "total_bookings": total_bookings,
+            "pending_bookings": pending_bookings,
+            "completed_bookings": completed_bookings,
+            "total_revenue": total_revenue,
+        }
+    }
+
 # Root routes
 @api_router.get("/")
 async def root():
