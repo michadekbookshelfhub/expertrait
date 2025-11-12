@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "ExperTrait",
+    "slug": "expertrait",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "icon": "./assets/images/explogo.png",
+    "scheme": "expertrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
