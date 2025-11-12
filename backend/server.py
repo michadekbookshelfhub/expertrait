@@ -380,6 +380,19 @@ async def get_professionals(skill: Optional[str] = None, available: Optional[boo
     result = []
     for p in professionals:
         p_dict = serialize_doc(p)
+        # Ensure required fields exist with defaults
+        if "skills" not in p_dict:
+            p_dict["skills"] = []
+        if "bio" not in p_dict:
+            p_dict["bio"] = None
+        if "rating" not in p_dict:
+            p_dict["rating"] = 5.0
+        if "total_jobs" not in p_dict:
+            p_dict["total_jobs"] = 0
+        if "available" not in p_dict:
+            p_dict["available"] = True
+        if "location" not in p_dict:
+            p_dict["location"] = None
         result.append(ProfessionalResponse(**p_dict))
     return result
 
