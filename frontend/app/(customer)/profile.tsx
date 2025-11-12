@@ -76,7 +76,7 @@ export default function Profile() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(customer)/notifications-settings')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="notifications-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Notifications</Text>
@@ -84,7 +84,7 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Language', 'English (US)\n\nMore languages coming soon!')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="language-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Language</Text>
