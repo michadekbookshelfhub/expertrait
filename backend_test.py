@@ -518,6 +518,16 @@ class APITester:
                     else:
                         self.log_result("Admin Setup", False, f"Failed to login after registration: {login_status}", login_response)
                         return False
+                elif reg_status == 400 and "already registered" in str(reg_response):
+                    # Admin already exists, try login again
+                    login_success, login_response, login_status = await self.make_request("POST", "/auth/login", ADMIN_CREDENTIALS)
+                    if login_success and login_status == 200:
+                        self.test_data["admin"] = login_response["user"]
+                        self.log_result("Admin Setup", True, "Admin already exists, logged in successfully")
+                        return True
+                    else:
+                        self.log_result("Admin Setup", False, f"Admin exists but login failed: {login_status}", login_response)
+                        return False
                 else:
                     self.log_result("Admin Setup", False, f"Failed to register admin: {reg_status}", reg_response)
                     return False
