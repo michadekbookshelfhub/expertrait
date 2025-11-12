@@ -201,6 +201,13 @@ export default function Home() {
         />
       </View>
 
+      {/* Promo Banner */}
+      <PromoBanner
+        title="Limited Time Offer!"
+        subtitle="Get 20% off on your first booking"
+        buttonText="Book Now"
+      />
+
       {recommendations.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recommended for You</Text>
