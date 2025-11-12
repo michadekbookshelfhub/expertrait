@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { motion } from "framer-motion";
 import { getBookingLink } from "../components/utils/deviceDetection";
-import WhatsAppButton from "./components/WhatsAppButton";
+import WhatsAppButton from "../components/WhatsAppButton";
 import AuthButtons from "@/components/AuthButtons"; // Import the new AuthButtons component
 
 export default function Layout({ children }) {
