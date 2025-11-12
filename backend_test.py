@@ -339,7 +339,7 @@ class APITester:
             return
         
         professional_id = self.test_data["professional"]["id"]
-        success, response, status = await self.make_request("PATCH", f"/professionals/{professional_id}/availability", {"available": False})
+        success, response, status = await self.make_request("PATCH", f"/professionals/{professional_id}/availability", params={"available": False})
         
         if success and status == 200:
             self.log_result("Update Availability", True, "Availability updated successfully")
