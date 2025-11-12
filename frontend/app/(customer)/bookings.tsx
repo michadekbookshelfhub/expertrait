@@ -190,23 +190,15 @@ export default function Bookings() {
 
       {selectedBooking && (
         <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: selectedBooking.location.latitude,
-              longitude: selectedBooking.location.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-          >
-            <Marker
-              coordinate={{
-                latitude: selectedBooking.location.latitude,
-                longitude: selectedBooking.location.longitude,
-              }}
-              title={selectedBooking.service_name}
-            />
-          </MapView>
+          <View style={styles.map}>
+            <Ionicons name="map-outline" size={60} color="#999" />
+            <Text style={{ color: '#999', marginTop: 8, textAlign: 'center' }}>
+              Map view for {selectedBooking.service_name}
+            </Text>
+            <Text style={{ color: '#666', marginTop: 4, fontSize: 12, textAlign: 'center' }}>
+              Location: {selectedBooking.location.latitude.toFixed(4)}, {selectedBooking.location.longitude.toFixed(4)}
+            </Text>
+          </View>
           <TouchableOpacity
             style={styles.closeMapButton}
             onPress={() => setSelectedBooking(null)}
