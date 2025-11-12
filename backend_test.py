@@ -799,6 +799,11 @@ class APITester:
         print(f"🔗 Testing against: {BACKEND_URL}")
         print("=" * 60)
         
+        # Setup admin user first
+        admin_setup_success = await self.setup_admin_user()
+        if not admin_setup_success:
+            print("❌ Failed to setup admin user. Skipping admin tests.")
+        
         # Test sequence following the booking workflow
         test_sequence = [
             # Authentication
@@ -849,6 +854,18 @@ class APITester:
                 self.test_create_checkout_session,
             ]),
         ]
+        
+        # Add admin tests if admin setup was successful
+        if admin_setup_success:
+            test_sequence.append(
+                ("Admin APIs", [
+                    self.test_banner_management,
+                    self.test_featured_categories,
+                    self.test_category_icons,
+                    self.test_admin_stats,
+                    self.test_admin_error_handling,
+                ])
+            )
         
         for category, tests in test_sequence:
             print(f"\n📋 {category} Tests:")
