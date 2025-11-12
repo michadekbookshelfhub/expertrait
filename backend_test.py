@@ -459,9 +459,13 @@ class APITester:
     
     async def test_duplicate_email_registration(self):
         """Test registering with duplicate email"""
+        if "customer" not in self.test_data:
+            self.log_result("Duplicate Email Test", False, "No customer data for duplicate test")
+            return
+            
         duplicate_data = {
             "name": "Another User",
-            "email": "sarah.johnson@email.com",  # Same email as first customer
+            "email": self.test_data["customer"]["email"],  # Same email as first customer
             "password": "AnotherPass123!",
             "phone": "+1-555-9999",
             "user_type": "customer"
