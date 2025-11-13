@@ -1001,7 +1001,7 @@ async def admin_delete_service(service_id: str):
     
     # Check if service has active bookings
     active_bookings = await db.bookings.count_documents({
-        "service_id": ObjectId(service_id),
+        "service_id": service_id,  # service_id is stored as string in bookings
         "status": {"$in": ["pending", "confirmed", "in_progress"]}
     })
     
