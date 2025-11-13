@@ -1094,6 +1094,14 @@ class APITester:
                     self.test_admin_error_handling,
                 ])
             )
+            
+            # NEW: Add service management tests
+            test_sequence.append(
+                ("NEW Service Management APIs", [
+                    self.test_admin_service_management,
+                    self.test_existing_apis_with_new_services,
+                ])
+            )
         
         for category, tests in test_sequence:
             print(f"\n📋 {category} Tests:")
