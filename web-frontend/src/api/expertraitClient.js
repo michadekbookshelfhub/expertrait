@@ -1,5 +1,5 @@
 // ExperTrait Backend Client
-const API_URL = 'https://expertpro-2.preview.emergentagent.com/api';
+const API_URL = 'https://service-hub-199.preview.emergentagent.com/api';
 
 export const expertraitClient = {
   // Services

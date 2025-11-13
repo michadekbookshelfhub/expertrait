@@ -13,7 +13,7 @@ import sys
 import os
 
 # Backend URL from environment
-BACKEND_URL = "https://expertpro-2.preview.emergentagent.com/api"
+BACKEND_URL = "https://service-hub-199.preview.emergentagent.com/api"
 
 # Test credentials
 ADMIN_CREDENTIALS = {
@@ -442,7 +442,7 @@ class APITester:
         
         payment_data = {
             "booking_id": self.test_data["booking"]["id"],
-            "origin_url": "https://expertpro-2.preview.emergentagent.com"
+            "origin_url": "https://service-hub-199.preview.emergentagent.com"
         }
         
         success, response, status = await self.make_request("POST", "/checkout/session", payment_data)
