@@ -294,11 +294,11 @@ frontend:
 
   - task: "Customer Bookings Screen"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/frontend/app/(customer)/bookings.tsx"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "testing"
@@ -306,6 +306,12 @@ frontend:
         - working: true
           agent: "testing"
           comment: "Customer bookings screen working correctly. Navigation successful, empty state displays properly with appropriate message 'No bookings yet - Book a service to get started!'. Map functionality replaced with web-compatible placeholder due to react-native-maps web incompatibility."
+        - working: false
+          agent: "user"
+          comment: "User reported: bookings on my bookings page are still not showing the booking details when clicked. Tapping on booking cards is not navigating to the detail screen."
+        - working: "NA"
+          agent: "main"
+          comment: "Fixed booking card navigation. Completed the router.push implementation in renderBookingCard function to navigate to /(customer)/booking-detail with bookingId parameter. Removed unused selectedBooking state and related map container code that was causing errors. Ready for testing."
 
   - task: "Customer Profile Screen"
     implemented: true
