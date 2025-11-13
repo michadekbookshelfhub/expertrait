@@ -98,6 +98,30 @@ export default function CustomerLayout() {
           href: null, // Hide from tabs
         }}
       />
+      <Tabs.Screen
+        name="help-center"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="booking-chat"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="my-tickets"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
     </Tabs>
   );
 }
