@@ -1598,6 +1598,292 @@ async def get_admin_analytics(
     
     # Revenue calculation
     revenue_pipeline = [
+
+
+# ==================== Chat System ====================
+
+class ChatMessage(BaseModel):
+    sender_id: str
+    sender_type: str  # 'customer', 'handler', 'admin'
+    receiver_id: Optional[str] = None  # None for admin chats
+    booking_id: Optional[str] = None  # For user-handler chats
+    message: str
+    message_type: str = "text"  # 'text', 'image', 'file'
+
+class SupportTicket(BaseModel):
+    user_id: str
+    subject: str
+    message: str
+    priority: str = "normal"  # 'low', 'normal', 'high', 'urgent'
+
+# User-Handler Chat (Booking-specific)
+@api_router.post("/chat/booking/{booking_id}/message")
+async def send_booking_message(booking_id: str, message: ChatMessage):
+    """Send message in booking chat"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    # Verify booking exists and user is authorized
+    booking = await db.bookings.find_one({"_id": ObjectId(booking_id)})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Check authorization
+    if message.sender_id not in [booking["customer_id"], booking.get("handler_id", "")]:
+        raise HTTPException(status_code=403, detail="Not authorized for this chat")
+    
+    message_dict = message.dict()
+    message_dict["booking_id"] = booking_id
+    message_dict["created_at"] = datetime.utcnow()
+    message_dict["read"] = False
+    
+    result = await db.chat_messages.insert_one(message_dict)
+    
+    # Notify via WebSocket
+    await manager.send_message(
+        message.receiver_id if message.receiver_id else booking["customer_id"],
+        {
+            "type": "new_message",
+            "message": message_dict,
+            "message_id": str(result.inserted_id)
+        }
+    )
+    
+    return {"message": "Message sent", "message_id": str(result.inserted_id)}
+
+@api_router.get("/chat/booking/{booking_id}/messages")
+async def get_booking_messages(booking_id: str, user_id: str, limit: int = 50):
+    """Get all messages for a booking"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    # Verify authorization
+    booking = await db.bookings.find_one({"_id": ObjectId(booking_id)})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    if user_id not in [booking["customer_id"], booking.get("handler_id", "")]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    messages = []
+    async for msg in db.chat_messages.find({"booking_id": booking_id}).sort("created_at", 1).limit(limit):
+        msg["id"] = str(msg["_id"])
+        del msg["_id"]
+        messages.append(msg)
+    
+    # Mark messages as read
+    await db.chat_messages.update_many(
+        {"booking_id": booking_id, "receiver_id": user_id, "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    return {"messages": messages, "total": len(messages)}
+
+# User-Admin Support Chat
+@api_router.post("/support/ticket")
+async def create_support_ticket(ticket: SupportTicket):
+    """Create a new support ticket"""
+    ticket_dict = ticket.dict()
+    ticket_dict["status"] = "open"  # open, in_progress, resolved, closed
+    ticket_dict["created_at"] = datetime.utcnow()
+    ticket_dict["updated_at"] = datetime.utcnow()
+    
+    result = await db.support_tickets.insert_one(ticket_dict)
+    
+    # Create initial message
+    initial_message = {
+        "ticket_id": str(result.inserted_id),
+        "sender_id": ticket.user_id,
+        "sender_type": "customer",
+        "message": ticket.message,
+        "created_at": datetime.utcnow(),
+        "read": False
+    }
+    await db.support_messages.insert_one(initial_message)
+    
+    return {"message": "Support ticket created", "ticket_id": str(result.inserted_id)}
+
+@api_router.post("/support/ticket/{ticket_id}/message")
+async def send_support_message(ticket_id: str, message: ChatMessage):
+    """Send message in support ticket"""
+    if not ObjectId.is_valid(ticket_id):
+        raise HTTPException(status_code=400, detail="Invalid ticket ID")
+    
+    # Verify ticket exists
+    ticket = await db.support_tickets.find_one({"_id": ObjectId(ticket_id)})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    message_dict = message.dict()
+    message_dict["ticket_id"] = ticket_id
+    message_dict["created_at"] = datetime.utcnow()
+    message_dict["read"] = False
+    
+    result = await db.support_messages.insert_one(message_dict)
+    
+    # Update ticket
+    await db.support_tickets.update_one(
+        {"_id": ObjectId(ticket_id)},
+        {"$set": {"updated_at": datetime.utcnow(), "status": "in_progress"}}
+    )
+    
+    return {"message": "Message sent", "message_id": str(result.inserted_id)}
+
+@api_router.get("/support/tickets/user/{user_id}")
+async def get_user_tickets(user_id: str):
+    """Get all support tickets for a user"""
+    tickets = []
+    async for ticket in db.support_tickets.find({"user_id": user_id}).sort("created_at", -1):
+        # Get message count
+        msg_count = await db.support_messages.count_documents({"ticket_id": str(ticket["_id"])})
+        
+        ticket["id"] = str(ticket["_id"])
+        del ticket["_id"]
+        ticket["message_count"] = msg_count
+        tickets.append(ticket)
+    
+    return {"tickets": tickets, "total": len(tickets)}
+
+@api_router.get("/support/ticket/{ticket_id}/messages")
+async def get_support_messages(ticket_id: str, limit: int = 100):
+    """Get all messages in a support ticket"""
+    if not ObjectId.is_valid(ticket_id):
+        raise HTTPException(status_code=400, detail="Invalid ticket ID")
+    
+    messages = []
+    async for msg in db.support_messages.find({"ticket_id": ticket_id}).sort("created_at", 1).limit(limit):
+        msg["id"] = str(msg["_id"])
+        del msg["_id"]
+        messages.append(msg)
+    
+    return {"messages": messages, "total": len(messages)}
+
+# Admin Chat Management
+@api_router.get("/admin/support/tickets")
+async def get_all_support_tickets(status: Optional[str] = None, limit: int = 100):
+    """Get all support tickets (admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    tickets = []
+    async for ticket in db.support_tickets.find(query).sort("updated_at", -1).limit(limit):
+        # Get user info
+        user = await db.users.find_one({"_id": ObjectId(ticket["user_id"])})
+        
+        # Get message count
+        msg_count = await db.support_messages.count_documents({"ticket_id": str(ticket["_id"])})
+        
+        ticket["id"] = str(ticket["_id"])
+        del ticket["_id"]
+        ticket["user_name"] = user.get("name") if user else "Unknown"
+        ticket["user_email"] = user.get("email") if user else "Unknown"
+        ticket["message_count"] = msg_count
+        tickets.append(ticket)
+    
+    return {"tickets": tickets, "total": len(tickets)}
+
+@api_router.put("/admin/support/ticket/{ticket_id}/status")
+async def update_ticket_status(ticket_id: str, status: str):
+    """Update support ticket status"""
+    valid_statuses = ["open", "in_progress", "resolved", "closed"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    if not ObjectId.is_valid(ticket_id):
+        raise HTTPException(status_code=400, detail="Invalid ticket ID")
+    
+    result = await db.support_tickets.update_one(
+        {"_id": ObjectId(ticket_id)},
+        {"$set": {"status": status, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    return {"message": "Status updated", "new_status": status}
+
+@api_router.get("/admin/chat/all-conversations")
+async def get_all_conversations(limit: int = 50):
+    """Get all booking conversations (admin monitoring)"""
+    # Get unique booking IDs with messages
+    pipeline = [
+        {"$group": {"_id": "$booking_id", "last_message": {"$max": "$created_at"}}},
+        {"$sort": {"last_message": -1}},
+        {"$limit": limit}
+    ]
+    
+    booking_ids = await db.chat_messages.aggregate(pipeline).to_list(limit)
+    
+    conversations = []
+    for item in booking_ids:
+        booking_id = item["_id"]
+        booking = await db.bookings.find_one({"_id": ObjectId(booking_id)})
+        
+        if booking:
+            # Get customer and handler info
+            customer = await db.users.find_one({"_id": ObjectId(booking["customer_id"])})
+            handler = await db.users.find_one({"_id": ObjectId(booking.get("handler_id", "000000000000000000000000"))})
+            
+            # Get service info
+            service = await db.services.find_one({"_id": ObjectId(booking["service_id"])})
+            
+            # Get message count
+            msg_count = await db.chat_messages.count_documents({"booking_id": booking_id})
+            
+            conversations.append({
+                "booking_id": booking_id,
+                "customer_name": customer.get("name") if customer else "Unknown",
+                "handler_name": handler.get("name") if handler else "Unassigned",
+                "service_name": service.get("name") if service else "Unknown",
+                "message_count": msg_count,
+                "last_message": item["last_message"],
+                "booking_status": booking["status"]
+            })
+    
+    return {"conversations": conversations, "total": len(conversations)}
+
+# Handler Profile for Customer
+@api_router.get("/bookings/{booking_id}/handler-profile")
+async def get_booking_handler_profile(booking_id: str):
+    """Get handler profile for a specific booking"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    booking = await db.bookings.find_one({"_id": ObjectId(booking_id)})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    handler_id = booking.get("handler_id")
+    if not handler_id:
+        return {"handler": None, "message": "No handler assigned yet"}
+    
+    # Get handler profile
+    handler = await db.users.find_one({"_id": ObjectId(handler_id), "user_type": "handler"})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    # Get handler stats
+    total_jobs = await db.bookings.count_documents({"handler_id": handler_id, "status": "completed"})
+    reviews = await db.reviews.find({"handler_id": handler_id}).to_list(None)
+    avg_rating = sum(r.get("rating", 0) for r in reviews) / len(reviews) if reviews else 0
+    
+    handler_profile = {
+        "id": str(handler["_id"]),
+        "name": handler.get("name"),
+        "email": handler.get("email"),
+        "profile_image_url": handler.get("profile_image_url"),
+        "bio": handler.get("bio", ""),
+        "skills": handler.get("skills", []),
+        "hourly_rate": handler.get("hourly_rate", 0),
+        "years_experience": handler.get("years_experience", 0),
+        "rating": round(avg_rating, 2),
+        "review_count": len(reviews),
+        "completed_jobs": total_jobs,
+    }
+    
+    return {"handler": handler_profile}
+
         {"$match": {**booking_query, "status": "completed"}},
         {"$lookup": {
             "from": "services",
