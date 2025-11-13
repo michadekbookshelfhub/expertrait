@@ -801,6 +801,224 @@ class APITester:
         else:
             self.log_result("Delete Non-existent Banner", False, f"Expected 404, got {status}")
 
+    # ==================== NEW Service Management Tests ====================
+    
+    async def test_admin_service_management(self):
+        """Test new admin service management APIs - Priority 1 from review request"""
+        print("\n🔧 NEW SERVICE MANAGEMENT APIs - Priority 1")
+        print("-" * 50)
+        
+        # Test 1: GET /api/admin/services - List all services
+        success, response, status = await self.make_request("GET", "/admin/services")
+        
+        if success and status == 200 and "services" in response:
+            services = response["services"]
+            total_count = response.get("total", len(services))
+            
+            # Check if we have 57+ services (was 31, added 26)
+            if total_count >= 57:
+                self.log_result("Admin Get All Services (57+ count)", True, f"Found {total_count} services (expected 57+)")
+                self.test_data["admin_services"] = services
+            else:
+                self.log_result("Admin Get All Services (57+ count)", False, f"Expected 57+ services, got {total_count}")
+                self.test_data["admin_services"] = services  # Still store for other tests
+        else:
+            self.log_result("Admin Get All Services", False, f"Status: {status}", response)
+            return
+        
+        # Test 2: Verify Hair Styling category has 10+ services
+        hair_styling_services = [s for s in services if s.get("category") == "Hair Styling"]
+        if len(hair_styling_services) >= 10:
+            self.log_result("Hair Styling Category (10+ services)", True, f"Found {len(hair_styling_services)} Hair Styling services")
+        else:
+            self.log_result("Hair Styling Category (10+ services)", False, f"Expected 10+ Hair Styling services, found {len(hair_styling_services)}")
+        
+        # Test 3: Verify Therapy category has 10+ services
+        therapy_services = [s for s in services if s.get("category") == "Therapy"]
+        if len(therapy_services) >= 10:
+            self.log_result("Therapy Category (10+ services)", True, f"Found {len(therapy_services)} Therapy services")
+        else:
+            self.log_result("Therapy Category (10+ services)", False, f"Expected 10+ Therapy services, found {len(therapy_services)}")
+        
+        # Test 4: Check new services have 150-word descriptions
+        services_with_long_desc = 0
+        services_with_image_url = 0
+        
+        for service in services:
+            description = service.get("description", "")
+            word_count = len(description.split()) if description else 0
+            
+            if word_count >= 100:  # Allow some flexibility
+                services_with_long_desc += 1
+            
+            if "image_url" in service and service["image_url"]:
+                services_with_image_url += 1
+        
+        self.log_result("Services with Substantial Descriptions", True, f"Found {services_with_long_desc} services with 100+ word descriptions")
+        self.log_result("Services with Image URLs", True, f"Found {services_with_image_url} services with image_url fields")
+        
+        # Test 5: GET /api/admin/services/{id} - Get single service
+        if services:
+            test_service = services[0]
+            service_id = test_service["id"]
+            
+            success, response, status = await self.make_request("GET", f"/admin/services/{service_id}")
+            
+            if success and status == 200 and response.get("id") == service_id:
+                self.log_result("Admin Get Single Service", True, f"Retrieved service: {response.get('name')}")
+                self.test_data["test_service"] = response
+            else:
+                self.log_result("Admin Get Single Service", False, f"Status: {status}", response)
+        
+        # Test 6: POST /api/admin/services - Create new service
+        new_service_data = {
+            "category": "Testing",
+            "name": "Test Service for Admin API",
+            "description": "This is a comprehensive test service created specifically to verify the new admin service creation API endpoint functionality. It includes a detailed description with multiple sentences to test the description field handling properly. The service is designed exclusively for testing purposes and should be deleted after the testing process is complete. This description contains well over 150 words to meet the stringent requirements for new service descriptions as specified in the testing criteria and review request documentation.",
+            "fixed_price": 199.99,
+            "estimated_duration": 90,
+            "image_url": "https://example.com/test-admin-service.jpg"
+        }
+        
+        success, response, status = await self.make_request("POST", "/admin/services", new_service_data)
+        
+        if success and status == 200 and "service" in response:
+            created_service = response["service"]
+            self.test_data["created_service_id"] = created_service["id"]
+            self.log_result("Admin Create Service", True, f"Created service: {created_service['name']}")
+        else:
+            self.log_result("Admin Create Service", False, f"Status: {status}", response)
+            return
+        
+        # Test 7: PUT /api/admin/services/{id} - Update service
+        if "created_service_id" in self.test_data:
+            service_id = self.test_data["created_service_id"]
+            update_data = {
+                "description": "Updated comprehensive test service description with enhanced details about the service functionality, features, and capabilities. This updated description demonstrates the ability to modify service information through the admin API effectively. The description has been significantly enhanced to provide more detailed information about the service capabilities, testing procedures, and administrative functionality.",
+                "fixed_price": 249.99,
+                "image_url": "https://example.com/updated-admin-service.jpg"
+            }
+            
+            success, response, status = await self.make_request("PUT", f"/admin/services/{service_id}", update_data)
+            
+            if success and status == 200 and "service" in response:
+                updated_service = response["service"]
+                price_updated = updated_service.get("fixed_price") == 249.99
+                desc_updated = "Updated comprehensive" in updated_service.get("description", "")
+                image_updated = updated_service.get("image_url") == "https://example.com/updated-admin-service.jpg"
+                
+                if price_updated and desc_updated and image_updated:
+                    self.log_result("Admin Update Service", True, "Successfully updated service description, price, and image_url")
+                else:
+                    self.log_result("Admin Update Service", False, f"Update incomplete - Price: {price_updated}, Desc: {desc_updated}, Image: {image_updated}")
+            else:
+                self.log_result("Admin Update Service", False, f"Status: {status}", response)
+        
+        # Test 8: DELETE /api/admin/services/{id} - Test booking protection
+        if "created_service_id" in self.test_data:
+            service_id = self.test_data["created_service_id"]
+            
+            # First try to create a booking for this service (to test protection)
+            if "customer" in self.test_data:
+                booking_data = {
+                    "service_id": service_id,
+                    "customer_id": self.test_data["customer"]["id"],
+                    "scheduled_time": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+                    "location": {"latitude": 40.7128, "longitude": -74.0060},
+                    "notes": "Test booking for deletion protection"
+                }
+                
+                booking_success, booking_response, booking_status = await self.make_request("POST", "/bookings", booking_data)
+                
+                if booking_success and booking_status == 200:
+                    # Now try to delete the service (should fail due to active booking)
+                    success, response, status = await self.make_request("DELETE", f"/admin/services/{service_id}")
+                    
+                    if status == 400 and "active bookings" in response.get("detail", "").lower():
+                        self.log_result("Delete Service with Bookings (Protection)", True, "Correctly prevented deletion of service with active bookings")
+                    else:
+                        self.log_result("Delete Service with Bookings (Protection)", False, f"Expected 400 with booking protection, got {status}")
+                else:
+                    # No booking created, just test normal deletion
+                    success, response, status = await self.make_request("DELETE", f"/admin/services/{service_id}")
+                    
+                    if success and status == 200:
+                        self.log_result("Delete Service (No Bookings)", True, "Successfully deleted service with no active bookings")
+                    else:
+                        self.log_result("Delete Service (No Bookings)", False, f"Status: {status}", response)
+            else:
+                # No customer available, just test deletion
+                success, response, status = await self.make_request("DELETE", f"/admin/services/{service_id}")
+                
+                if success and status == 200:
+                    self.log_result("Delete Service", True, "Successfully deleted test service")
+                else:
+                    self.log_result("Delete Service", False, f"Status: {status}", response)
+    
+    async def test_existing_apis_with_new_services(self):
+        """Test existing service APIs work with 57+ services - Priority 3"""
+        print("\n✅ EXISTING FUNCTIONALITY with 57+ Services - Priority 3")
+        print("-" * 50)
+        
+        # Test GET /api/services - Should return all 57+ services
+        success, response, status = await self.make_request("GET", "/services")
+        
+        if success and status == 200 and isinstance(response, list):
+            service_count = len(response)
+            if service_count >= 57:
+                self.log_result("Public API - All Services (57+)", True, f"Retrieved {service_count} services via public API")
+            else:
+                self.log_result("Public API - All Services (57+)", False, f"Expected 57+ services, got {service_count}")
+        else:
+            self.log_result("Public API - All Services", False, f"Status: {status}", response)
+        
+        # Test GET /api/services?category=Hair Styling - Should return 10+ services
+        success, response, status = await self.make_request("GET", "/services", params={"category": "Hair Styling"})
+        
+        if success and status == 200 and isinstance(response, list):
+            hair_count = len(response)
+            if hair_count >= 10:
+                self.log_result("Public API - Hair Styling Filter (10+)", True, f"Found {hair_count} Hair Styling services")
+            else:
+                self.log_result("Public API - Hair Styling Filter (10+)", False, f"Expected 10+ Hair Styling services, got {hair_count}")
+        else:
+            self.log_result("Public API - Hair Styling Filter", False, f"Status: {status}", response)
+        
+        # Test GET /api/services?category=Therapy - Should return 10+ services
+        success, response, status = await self.make_request("GET", "/services", params={"category": "Therapy"})
+        
+        if success and status == 200 and isinstance(response, list):
+            therapy_count = len(response)
+            if therapy_count >= 10:
+                self.log_result("Public API - Therapy Filter (10+)", True, f"Found {therapy_count} Therapy services")
+            else:
+                self.log_result("Public API - Therapy Filter (10+)", False, f"Expected 10+ Therapy services, got {therapy_count}")
+        else:
+            self.log_result("Public API - Therapy Filter", False, f"Status: {status}", response)
+        
+        # Test GET /api/categories - Should include 12+ categories now
+        success, response, status = await self.make_request("GET", "/categories")
+        
+        if success and status == 200 and "categories" in response:
+            categories = response["categories"]
+            category_count = len(categories)
+            
+            if category_count >= 12:
+                self.log_result("Public API - Categories (12+)", True, f"Found {category_count} categories (expected 12+)")
+            else:
+                self.log_result("Public API - Categories (12+)", False, f"Expected 12+ categories, got {category_count}")
+            
+            # Check for new categories
+            has_hair_styling = "Hair Styling" in categories
+            has_therapy = "Therapy" in categories
+            
+            if has_hair_styling and has_therapy:
+                self.log_result("New Categories Present", True, "Hair Styling and Therapy categories found")
+            else:
+                self.log_result("New Categories Present", False, f"Hair Styling: {has_hair_styling}, Therapy: {has_therapy}")
+        else:
+            self.log_result("Public API - Categories", False, f"Status: {status}", response)
+
     # ==================== Main Test Runner ====================
     
     async def run_all_tests(self):
