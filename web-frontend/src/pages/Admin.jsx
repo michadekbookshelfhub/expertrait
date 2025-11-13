@@ -5,9 +5,261 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, Users, Briefcase, Calendar, DollarSign } from 'lucide-react';
+import { Loader2, TrendingUp, Users, Briefcase, Calendar, DollarSign, Edit, Trash2, Plus } from 'lucide-react';
+import { Textarea } from "@/components/ui/textarea";
 
 const API_URL = import.meta.env.VITE_API_URL || '';
+
+// Services Management Component
+function ServicesManagement() {
+  const { toast } = useToast();
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingService, setEditingService] = useState(null);
+  const [filterCategory, setFilterCategory] = useState('All');
+
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/services`);
+      if (response.ok) {
+        const data = await response.json();
+        setServices(data.services);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load services",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateService = async (serviceId, updates) => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/services/${serviceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Service updated successfully",
+        });
+        setEditingService(null);
+        loadServices();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update service",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteService = async (serviceId) => {
+    if (!confirm('Are you sure you want to delete this service?')) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/admin/services/${serviceId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Service deleted successfully",
+        });
+        loadServices();
+      } else {
+        const data = await response.json();
+        toast({
+          title: "Error",
+          description: data.detail || "Failed to delete service",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete service",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const categories = ['All', ...new Set(services.map(s => s.category))];
+  const filteredServices = filterCategory === 'All' 
+    ? services 
+    : services.filter(s => s.category === filterCategory);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Management</CardTitle>
+          <CardDescription>Edit descriptions, prices, and details for all services</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Category Filter */}
+          <div className="flex gap-2 mb-6 flex-wrap">
+            {categories.map((cat) => (
+              <Button
+                key={cat}
+                size="sm"
+                variant={filterCategory === cat ? "default" : "outline"}
+                onClick={() => setFilterCategory(cat)}
+                className={filterCategory === cat ? "bg-orange-500 hover:bg-orange-600" : ""}
+              >
+                {cat} ({cat === 'All' ? services.length : services.filter(s => s.category === cat).length})
+              </Button>
+            ))}
+          </div>
+
+          {/* Services List */}
+          <div className="space-y-4">
+            {filteredServices.map((service) => (
+              <div key={service.id} className="border rounded-lg p-4">
+                {editingService?.id === service.id ? (
+                  // Edit Mode
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Service Name</Label>
+                      <Input
+                        value={editingService.name}
+                        onChange={(e) => setEditingService({...editingService, name: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label>Category</Label>
+                      <Input
+                        value={editingService.category}
+                        onChange={(e) => setEditingService({...editingService, category: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label>Description (150 words)</Label>
+                      <Textarea
+                        value={editingService.description}
+                        onChange={(e) => setEditingService({...editingService, description: e.target.value})}
+                        rows={6}
+                        className="text-sm"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Words: {editingService.description.split(/\s+/).length}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Price ($)</Label>
+                        <Input
+                          type="number"
+                          value={editingService.fixed_price}
+                          onChange={(e) => setEditingService({...editingService, fixed_price: parseFloat(e.target.value)})}
+                        />
+                      </div>
+                      <div>
+                        <Label>Duration (min)</Label>
+                        <Input
+                          type="number"
+                          value={editingService.estimated_duration}
+                          onChange={(e) => setEditingService({...editingService, estimated_duration: parseInt(e.target.value)})}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Image URL</Label>
+                      <Input
+                        value={editingService.image_url || ''}
+                        onChange={(e) => setEditingService({...editingService, image_url: e.target.value})}
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleUpdateService(service.id, editingService)}
+                        className="bg-orange-500 hover:bg-orange-600"
+                      >
+                        Save Changes
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setEditingService(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // View Mode
+                  <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg">{service.name}</h3>
+                        <p className="text-sm text-orange-600">{service.category}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingService(service)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteService(service.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-3">{service.description}</p>
+                    <div className="flex gap-4 text-sm">
+                      <span className="font-semibold text-green-600">${service.fixed_price}</span>
+                      <span className="text-gray-500">{service.estimated_duration} min</span>
+                    </div>
+                    {service.image_url && (
+                      <div className="mt-3">
+                        <img 
+                          src={service.image_url} 
+                          alt={service.name}
+                          className="w-32 h-24 object-cover rounded"
+                          onError={(e) => e.target.style.display = 'none'}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {filteredServices.length === 0 && (
+            <p className="text-center text-gray-500 py-8">No services found in this category</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function Admin() {
   const { toast } = useToast();
