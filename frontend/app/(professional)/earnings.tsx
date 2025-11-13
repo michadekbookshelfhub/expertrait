@@ -3,78 +3,64 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   SafeAreaView,
-  FlatList,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../services/api';
 
-interface CompletedBooking {
-  id: string;
-  service_name: string;
-  service_price: number;
-  completed_at: string;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+interface EarningsData {
+  total_earnings: number;
+  total_jobs: number;
+  average_per_job: number;
+  month_earnings: number;
+  earnings_history: Array<{
+    booking_id: string;
+    service_name: string;
+    amount: number;
+    completed_date: string;
+  }>;
 }
 
 export default function Earnings() {
   const { user } = useAuth();
-  const [bookings, setBookings] = useState<CompletedBooking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [totalEarnings, setTotalEarnings] = useState(0);
+  const [earnings, setEarnings] = useState<EarningsData | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadEarnings();
   }, []);
 
   const loadEarnings = async () => {
-    if (!user) return;
+    if (!user?.id) return;
+    
     try {
-      const data = await api.getProfessionalBookings(user.id);
-      const completed = data.filter((b: any) => b.status === 'completed');
-      setBookings(completed);
-      
-      const total = completed.reduce(
-        (sum: number, booking: any) => sum + booking.service_price,
-        0
+      setLoading(true);
+      const response = await fetch(
+        `${API_URL}/api/professionals/${user.id}/earnings`
       );
-      setTotalEarnings(total);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEarnings(data);
+      }
     } catch (error) {
       console.error('Failed to load earnings:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadEarnings();
-  };
-
-  const renderEarningCard = ({ item }: { item: CompletedBooking }) => (
-    <View style={styles.earningCard}>
-      <View style={styles.earningHeader}>
-        <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-        <View style={styles.earningInfo}>
-          <Text style={styles.serviceName}>{item.service_name}</Text>
-          <Text style={styles.date}>
-            {new Date(item.completed_at).toLocaleDateString()}
-          </Text>
-        </View>
-        <Text style={styles.amount}>+${item.service_price.toFixed(2)}</Text>
-      </View>
-    </View>
-  );
-
-  if (loading) {
+  if (!earnings) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text>Loading earnings...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -82,52 +68,74 @@ export default function Earnings() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Earnings</Text>
+        <Text style={styles.headerSubtitle}>Track your income</Text>
       </View>
 
-      <View style={styles.totalCard}>
-        <Text style={styles.totalLabel}>Total Earnings</Text>
-        <Text style={styles.totalAmount}>${totalEarnings.toFixed(2)}</Text>
-        <Text style={styles.totalJobs}>{bookings.length} completed jobs</Text>
-      </View>
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadEarnings} />
+        }
+      >
+        {/* Summary Cards */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Ionicons name="wallet" size={32} color="#FF6B00" />
+            <Text style={styles.statValue}>
+              ${earnings.total_earnings.toFixed(2)}
+            </Text>
+            <Text style={styles.statLabel}>Total Earnings</Text>
+          </View>
 
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Ionicons name="calendar" size={24} color="#FF6B00" />
-          <Text style={styles.statValue}>
-            ${(totalEarnings / (bookings.length || 1)).toFixed(2)}
-          </Text>
-          <Text style={styles.statLabel}>Avg per Job</Text>
+          <View style={styles.statCard}>
+            <Ionicons name="briefcase" size={32} color="#4CAF50" />
+            <Text style={styles.statValue}>{earnings.total_jobs}</Text>
+            <Text style={styles.statLabel}>Completed Jobs</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Ionicons name="trending-up" size={32} color="#2196F3" />
+            <Text style={styles.statValue}>
+              ${earnings.average_per_job.toFixed(2)}
+            </Text>
+            <Text style={styles.statLabel}>Avg per Job</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Ionicons name="calendar" size={32} color="#9C27B0" />
+            <Text style={styles.statValue}>
+              ${earnings.month_earnings.toFixed(2)}
+            </Text>
+            <Text style={styles.statLabel}>This Month</Text>
+          </View>
         </View>
-        <View style={styles.statCard}>
-          <Ionicons name="star" size={24} color="#FFB800" />
-          <Text style={styles.statValue}>{user?.rating || 5.0}</Text>
-          <Text style={styles.statLabel}>Rating</Text>
-        </View>
-      </View>
 
-      <View style={styles.listHeader}>
-        <Text style={styles.listTitle}>Transaction History</Text>
-      </View>
-
-      {bookings.length > 0 ? (
-        <FlatList
-          data={bookings}
-          renderItem={renderEarningCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="wallet-outline" size={80} color="#CCC" />
-          <Text style={styles.emptyText}>No earnings yet</Text>
-          <Text style={styles.emptySubtext}>
-            Complete jobs to start earning
-          </Text>
+        {/* Recent Transactions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          {earnings.earnings_history.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No transactions yet</Text>
+            </View>
+          ) : (
+            earnings.earnings_history.map((transaction, index) => (
+              <View key={index} style={styles.transactionCard}>
+                <View style={styles.transactionInfo}>
+                  <Text style={styles.transactionService}>
+                    {transaction.service_name}
+                  </Text>
+                  <Text style={styles.transactionDate}>
+                    {new Date(transaction.completed_date).toLocaleDateString()}
+                  </Text>
+                </View>
+                <Text style={styles.transactionAmount}>
+                  +${transaction.amount.toFixed(2)}
+                </Text>
+              </View>
+            ))
+          )}
         </View>
-      )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -145,51 +153,35 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
   },
-  totalCard: {
-    backgroundColor: '#4CAF50',
-    margin: 16,
-    padding: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  totalLabel: {
-    fontSize: 16,
-    color: '#FFF',
-    opacity: 0.9,
-  },
-  totalAmount: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginVertical: 8,
-  },
-  totalJobs: {
+  headerSubtitle: {
     fontSize: 14,
-    color: '#FFF',
-    opacity: 0.9,
+    color: '#666',
+    marginTop: 4,
   },
-  statsContainer: {
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  statsGrid: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    flexWrap: 'wrap',
+    marginBottom: 24,
     gap: 12,
-    marginBottom: 16,
   },
   statCard: {
     flex: 1,
+    minWidth: '45%',
     backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    padding: 20,
+    borderRadius: 16,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -201,76 +193,56 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    marginTop: 8,
+    marginTop: 12,
   },
   statLabel: {
     fontSize: 12,
     color: '#666',
     marginTop: 4,
+    textAlign: 'center',
   },
-  listHeader: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
+  section: {
+    marginBottom: 24,
   },
-  listTitle: {
+  sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  earningCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  earningHeader: {
+  transactionCard: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
   },
-  earningInfo: {
+  transactionInfo: {
     flex: 1,
-    marginLeft: 12,
   },
-  serviceName: {
+  transactionService: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#333',
+    marginBottom: 4,
   },
-  date: {
+  transactionDate: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    color: '#999',
   },
-  amount: {
+  transactionAmount: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#4CAF50',
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    padding: 32,
     alignItems: 'center',
-    padding: 40,
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#999',
-    marginTop: 16,
-  },
-  emptySubtext: {
     fontSize: 14,
     color: '#999',
-    marginTop: 8,
-    textAlign: 'center',
   },
 });
