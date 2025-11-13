@@ -418,6 +418,167 @@ async def update_handler_location(handler_id: str, location: LocationUpdate):
         {"$set": {"location": location.dict()}}
     )
     
+
+
+# ==================== Auto-Assignment Algorithm ====================
+
+from math import radians, cos, sin, asin, sqrt
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    """Calculate distance between two points in miles using Haversine formula"""
+    # Convert to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a))
+    miles = 3959 * c  # Earth radius in miles
+    
+    return miles
+
+async def find_best_handler(booking_id: str):
+    """Find and assign the best handler for a booking"""
+    booking = await db.bookings.find_one({"_id": ObjectId(booking_id)})
+    if not booking:
+        return None
+    
+    # Get service details
+    service = await db.services.find_one({"_id": ObjectId(booking["service_id"])})
+    if not service:
+        return None
+    
+    booking_location = booking.get("location", {})
+    booking_lat = booking_location.get("latitude", 0)
+    booking_lon = booking_location.get("longitude", 0)
+    
+    # Find all active handlers
+    handlers = []
+    async for handler in db.users.find({"user_type": "handler", "status": "active"}):
+        handler_id = str(handler["_id"])
+        
+        # Check skills match
+        handler_skills = handler.get("skills", [])
+        service_category = service.get("category", "")
+        
+        # Calculate distance
+        handler_location = handler.get("location", {})
+        handler_lat = handler_location.get("latitude", 0)
+        handler_lon = handler_location.get("longitude", 0)
+        
+        if handler_lat and handler_lon and booking_lat and booking_lon:
+            distance = calculate_distance(booking_lat, booking_lon, handler_lat, handler_lon)
+        else:
+            distance = 999  # Default large distance
+        
+        # Check availability
+        availability = await db.availability.find_one({"handler_id": handler_id})
+        is_available = availability is not None if availability else True
+        
+        # Get handler rating
+        handler_rating = handler.get("rating", 0)
+        
+        # Get current workload
+        active_jobs = await db.bookings.count_documents({
+            "handler_id": handler_id,
+            "status": {"$in": ["pending", "confirmed", "in_progress"]}
+        })
+        
+        # Calculate score
+        score = 0
+        
+        # Skills match (40 points)
+        if service_category in handler_skills or any(skill.lower() in service_category.lower() for skill in handler_skills):
+            score += 40
+        
+        # Proximity (30 points) - inverse of distance
+        if distance < 5:
+            score += 30
+        elif distance < 10:
+            score += 20
+        elif distance < 20:
+            score += 10
+        
+        # Rating (20 points)
+        score += (handler_rating / 5.0) * 20
+        
+        # Availability (10 points)
+        if is_available:
+            score += 10
+        
+        # Workload penalty
+        score -= (active_jobs * 5)
+        
+        handlers.append({
+            "handler_id": handler_id,
+            "handler_name": handler.get("name"),
+            "score": score,
+            "distance": distance,
+            "rating": handler_rating,
+            "active_jobs": active_jobs,
+            "skills_match": service_category in handler_skills
+        })
+    
+    # Sort by score
+    handlers.sort(key=lambda x: x["score"], reverse=True)
+    
+    # Assign to best handler
+    if handlers and handlers[0]["score"] > 20:  # Minimum score threshold
+        best_handler = handlers[0]
+        await db.bookings.update_one(
+            {"_id": ObjectId(booking_id)},
+            {"$set": {
+                "handler_id": best_handler["handler_id"],
+                "status": "confirmed",
+                "assigned_at": datetime.utcnow()
+            }}
+        )
+        return best_handler
+    
+    return None
+
+@api_router.post("/bookings/{booking_id}/auto-assign")
+async def auto_assign_handler(booking_id: str):
+    """Automatically assign the best handler to a booking"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    result = await find_best_handler(booking_id)
+    
+    if result:
+        return {
+            "message": "Handler assigned successfully",
+            "handler_id": result["handler_id"],
+            "handler_name": result["handler_name"],
+            "match_score": result["score"],
+            "distance_miles": round(result["distance"], 2)
+        }
+    else:
+        return {
+            "message": "No suitable handler found",
+            "handler_id": None
+        }
+
+@api_router.post("/bookings/batch-auto-assign")
+async def batch_auto_assign():
+    """Auto-assign all pending bookings"""
+    pending_bookings = []
+    async for booking in db.bookings.find({"status": "pending", "handler_id": {"$exists": False}}):
+        booking_id = str(booking["_id"])
+        result = await find_best_handler(booking_id)
+        if result:
+            pending_bookings.append({
+                "booking_id": booking_id,
+                "assigned_to": result["handler_name"],
+                "score": result["score"]
+            })
+    
+    return {
+        "message": f"Assigned {len(pending_bookings)} bookings",
+        "assignments": pending_bookings
+    }
+
     # Find active booking for this handler
     active_booking = await db.bookings.find_one({
         "handler_id": handler_id,
