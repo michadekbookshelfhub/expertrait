@@ -498,13 +498,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "New Home Screen Components"
-    - "Category Navigation Flow"
-    - "Service Detail Screen"
-    - "Cart Functionality"
-    - "Custom Task Screen"
-  stuck_tasks:
-    - "New Home Screen Components"
+    - "Customer Bookings Screen"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
