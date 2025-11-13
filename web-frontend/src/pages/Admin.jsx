@@ -312,6 +312,10 @@ export default function Admin() {
             </div>
           </TabsContent>
 
+          <TabsContent value="services">
+            <ServicesManagement />
+          </TabsContent>
+
           <TabsContent value="categories">
             <Card>
               <CardHeader>
