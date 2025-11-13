@@ -122,6 +122,24 @@ export default function CustomerLayout() {
           href: null, // Hide from tabs
         }}
       />
+      <Tabs.Screen
+        name="booking-detail"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="terms-of-service"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="privacy-policy"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
     </Tabs>
   );
 }
