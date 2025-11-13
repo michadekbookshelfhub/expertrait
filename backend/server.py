@@ -94,7 +94,7 @@ class UserCreate(BaseModel):
     password: str
     phone: str
     address: Optional[str] = None
-    user_type: str = "customer"  # "customer" or "professional"
+    user_type: str = "customer"  # "customer" or "handler"
 
 class UserResponse(BaseModel):
     id: str
@@ -109,7 +109,7 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-class ProfessionalCreate(BaseModel):
+class HandlerCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
@@ -117,7 +117,7 @@ class ProfessionalCreate(BaseModel):
     skills: List[str]
     bio: Optional[str] = None
 
-class ProfessionalResponse(BaseModel):
+class HandlerResponse(BaseModel):
     id: str
     name: str
     email: str
@@ -159,7 +159,7 @@ class BookingResponse(BaseModel):
     id: str
     service_id: str
     customer_id: str
-    professional_id: Optional[str] = None
+    handler_id: Optional[str] = None
     service_name: str
     service_price: float
     status: str  # pending, accepted, in_progress, completed, cancelled
@@ -173,14 +173,14 @@ class BookingResponse(BaseModel):
 
 class BookingUpdate(BaseModel):
     status: Optional[str] = None
-    professional_id: Optional[str] = None
+    handler_id: Optional[str] = None
     actual_start: Optional[datetime] = None
     actual_end: Optional[datetime] = None
 
 class ReviewCreate(BaseModel):
     booking_id: str
     customer_id: str
-    professional_id: str
+    handler_id: str
     rating: int  # 1-5
     comment: Optional[str] = None
 
@@ -189,13 +189,13 @@ class ReviewResponse(BaseModel):
     booking_id: str
     customer_id: str
     customer_name: str
-    professional_id: str
+    handler_id: str
     rating: int
     comment: Optional[str] = None
     created_at: datetime
 
 class LocationUpdate(BaseModel):
-    professional_id: str
+    handler_id: str
     latitude: float
     longitude: float
     accuracy: Optional[float] = None
@@ -222,7 +222,7 @@ def serialize_doc(doc: dict) -> dict:
 
 @api_router.post("/auth/register", response_model=UserResponse)
 async def register_user(user: UserCreate):
-    """Register a new user (customer or professional)"""
+    """Register a new user (customer or handler)"""
     # Check if email exists
     existing = await db.users.find_one({"email": user.email})
     if existing:
@@ -232,7 +232,7 @@ async def register_user(user: UserCreate):
     user_dict["password"] = hash_password(user.password)
     user_dict["created_at"] = datetime.utcnow()
     
-    if user.user_type == "professional":
+    if user.user_type == "handler":
         user_dict["rating"] = 5.0
         user_dict["total_jobs"] = 0
         user_dict["available"] = True
@@ -311,7 +311,7 @@ async def create_booking(booking: BookingCreate):
     booking_dict["status"] = "pending"
     booking_dict["payment_status"] = "pending"
     booking_dict["created_at"] = datetime.utcnow()
-    booking_dict["professional_id"] = None
+    booking_dict["handler_id"] = None
     booking_dict["actual_start"] = None
     booking_dict["actual_end"] = None
     
@@ -325,15 +325,15 @@ async def get_customer_bookings(customer_id: str):
     bookings = await db.bookings.find({"customer_id": customer_id}).sort("created_at", -1).to_list(1000)
     return [BookingResponse(**serialize_doc(b)) for b in bookings]
 
-@api_router.get("/bookings/professional/{professional_id}", response_model=List[BookingResponse])
-async def get_professional_bookings(professional_id: str):
-    """Get all bookings for a professional"""
-    bookings = await db.bookings.find({"professional_id": professional_id}).sort("created_at", -1).to_list(1000)
+@api_router.get("/bookings/handler/{handler_id}", response_model=List[BookingResponse])
+async def get_handler_bookings(handler_id: str):
+    """Get all bookings for a handler"""
+    bookings = await db.bookings.find({"handler_id": handler_id}).sort("created_at", -1).to_list(1000)
     return [BookingResponse(**serialize_doc(b)) for b in bookings]
 
 @api_router.get("/bookings/pending")
 async def get_pending_bookings():
-    """Get all pending bookings for professionals to accept"""
+    """Get all pending bookings for handlers to accept"""
     bookings = await db.bookings.find({"status": "pending"}).sort("created_at", -1).to_list(1000)
     return [BookingResponse(**serialize_doc(b)) for b in bookings]
 
@@ -371,20 +371,20 @@ async def update_booking(booking_id: str, update: BookingUpdate):
     
     return BookingResponse(**serialize_doc(updated_booking))
 
-# ==================== Professional Routes ====================
+# ==================== Handler Routes ====================
 
-@api_router.get("/professionals", response_model=List[ProfessionalResponse])
-async def get_professionals(skill: Optional[str] = None, available: Optional[bool] = None):
-    """Get all professionals, optionally filtered"""
-    query = {"user_type": "professional"}
+@api_router.get("/handlers", response_model=List[HandlerResponse])
+async def get_handlers(skill: Optional[str] = None, available: Optional[bool] = None):
+    """Get all handlers, optionally filtered"""
+    query = {"user_type": "handler"}
     if skill:
         query["skills"] = {"$in": [skill]}
     if available is not None:
         query["available"] = available
     
-    professionals = await db.users.find(query).to_list(1000)
+    handlers = await db.users.find(query).to_list(1000)
     result = []
-    for p in professionals:
+    for p in handlers:
         p_dict = serialize_doc(p)
         # Ensure required fields exist with defaults
         if "skills" not in p_dict:
@@ -399,28 +399,28 @@ async def get_professionals(skill: Optional[str] = None, available: Optional[boo
             p_dict["available"] = True
         if "location" not in p_dict:
             p_dict["location"] = None
-        result.append(ProfessionalResponse(**p_dict))
+        result.append(HandlerResponse(**p_dict))
     return result
 
-@api_router.get("/professionals/{professional_id}", response_model=ProfessionalResponse)
-async def get_professional(professional_id: str):
-    """Get professional details"""
-    professional = await db.users.find_one({"_id": ObjectId(professional_id), "user_type": "professional"})
-    if not professional:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    return ProfessionalResponse(**serialize_doc(professional))
+@api_router.get("/handlers/{handler_id}", response_model=HandlerResponse)
+async def get_handler(handler_id: str):
+    """Get handler details"""
+    handler = await db.users.find_one({"_id": ObjectId(handler_id), "user_type": "handler"})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    return HandlerResponse(**serialize_doc(handler))
 
-@api_router.patch("/professionals/{professional_id}/location")
-async def update_professional_location(professional_id: str, location: LocationUpdate):
-    """Update professional's real-time location"""
+@api_router.patch("/handlers/{handler_id}/location")
+async def update_handler_location(handler_id: str, location: LocationUpdate):
+    """Update handler's real-time location"""
     await db.users.update_one(
-        {"_id": ObjectId(professional_id)},
+        {"_id": ObjectId(handler_id)},
         {"$set": {"location": location.dict()}}
     )
     
-    # Find active booking for this professional
+    # Find active booking for this handler
     active_booking = await db.bookings.find_one({
-        "professional_id": professional_id,
+        "handler_id": handler_id,
         "status": {"$in": ["accepted", "in_progress"]}
     })
     
@@ -429,7 +429,7 @@ async def update_professional_location(professional_id: str, location: LocationU
         await manager.send_personal_message(
             {
                 "type": "location_update",
-                "professional_id": professional_id,
+                "handler_id": handler_id,
                 "location": location.dict()
             },
             active_booking["customer_id"]
@@ -437,14 +437,14 @@ async def update_professional_location(professional_id: str, location: LocationU
     
     return {"message": "Location updated successfully"}
 
-@api_router.patch("/professionals/{professional_id}/availability")
-async def update_availability(professional_id: str, available: bool = None):
-    """Toggle professional availability"""
+@api_router.patch("/handlers/{handler_id}/availability")
+async def update_availability(handler_id: str, available: bool = None):
+    """Toggle handler availability"""
     if available is None:
         raise HTTPException(status_code=400, detail="Available parameter is required")
     
     await db.users.update_one(
-        {"_id": ObjectId(professional_id)},
+        {"_id": ObjectId(handler_id)},
         {"$set": {"available": available}}
     )
     return {"message": "Availability updated", "available": available}
@@ -473,21 +473,21 @@ async def create_review(review: ReviewCreate):
     
     result = await db.reviews.insert_one(review_dict)
     
-    # Update professional rating
-    reviews = await db.reviews.find({"professional_id": review.professional_id}).to_list(1000)
+    # Update handler rating
+    reviews = await db.reviews.find({"handler_id": review.handler_id}).to_list(1000)
     avg_rating = sum(r["rating"] for r in reviews) / len(reviews)
     await db.users.update_one(
-        {"_id": ObjectId(review.professional_id)},
+        {"_id": ObjectId(review.handler_id)},
         {"$set": {"rating": round(avg_rating, 1)}}
     )
     
     created_review = await db.reviews.find_one({"_id": result.inserted_id})
     return ReviewResponse(**serialize_doc(created_review))
 
-@api_router.get("/reviews/professional/{professional_id}", response_model=List[ReviewResponse])
-async def get_professional_reviews(professional_id: str):
-    """Get all reviews for a professional"""
-    reviews = await db.reviews.find({"professional_id": professional_id}).sort("created_at", -1).to_list(1000)
+@api_router.get("/reviews/handler/{handler_id}", response_model=List[ReviewResponse])
+async def get_handler_reviews(handler_id: str):
+    """Get all reviews for a handler"""
+    reviews = await db.reviews.find({"handler_id": handler_id}).sort("created_at", -1).to_list(1000)
     return [ReviewResponse(**serialize_doc(r)) for r in reviews]
 
 # ==================== Payment Routes ====================
@@ -679,7 +679,7 @@ async def seed_services():
         # Cleaning Services
         {"category": "Cleaning", "name": "General Home Cleaning", "description": "Complete home cleaning including all rooms", "fixed_price": 80.0, "estimated_duration": 120},
         {"category": "Cleaning", "name": "Deep Cleaning", "description": "Thorough deep cleaning of entire home", "fixed_price": 150.0, "estimated_duration": 240},
-        {"category": "Cleaning", "name": "Carpet Cleaning", "description": "Professional carpet steam cleaning", "fixed_price": 120.0, "estimated_duration": 90},
+        {"category": "Cleaning", "name": "Carpet Cleaning", "description": "Handler carpet steam cleaning", "fixed_price": 120.0, "estimated_duration": 90},
         {"category": "Cleaning", "name": "Window Cleaning", "description": "Interior and exterior window cleaning", "fixed_price": 60.0, "estimated_duration": 60},
         
         # Plumbing Services
@@ -882,7 +882,7 @@ async def get_admin_stats():
     """Get platform statistics"""
     total_users = await db.users.count_documents({})
     total_customers = await db.users.count_documents({"user_type": "customer"})
-    total_professionals = await db.users.count_documents({"user_type": "professional"})
+    total_handlers = await db.users.count_documents({"user_type": "handler"})
     total_services = await db.services.count_documents({})
     total_bookings = await db.bookings.count_documents({})
     pending_bookings = await db.bookings.count_documents({"status": "pending"})
@@ -911,7 +911,7 @@ async def get_admin_stats():
         "stats": {
             "total_users": total_users,
             "total_customers": total_customers,
-            "total_professionals": total_professionals,
+            "total_handlers": total_handlers,
             "total_services": total_services,
             "total_bookings": total_bookings,
             "pending_bookings": pending_bookings,
@@ -1020,9 +1020,9 @@ async def admin_delete_service(service_id: str):
 
 
 
-# ==================== Professional Features ====================
+# ==================== Handler Features ====================
 
-class ProfessionalProfileUpdate(BaseModel):
+class HandlerProfileUpdate(BaseModel):
     bio: Optional[str] = None
     skills: Optional[List[str]] = None
     hourly_rate: Optional[float] = None
@@ -1040,68 +1040,68 @@ class AvailabilitySlot(BaseModel):
 class ReviewModel(BaseModel):
     booking_id: str
     customer_id: str
-    professional_id: str
+    handler_id: str
     rating: int  # 1-5
     comment: Optional[str] = None
     service_quality: int = 5
-    professionalism: int = 5
+    handlerism: int = 5
     timeliness: int = 5
 
-# Professional Profile Management
-@api_router.get("/professionals/{professional_id}/profile")
-async def get_professional_profile(professional_id: str):
-    """Get professional's complete profile"""
-    if not ObjectId.is_valid(professional_id):
-        raise HTTPException(status_code=400, detail="Invalid professional ID")
+# Handler Profile Management
+@api_router.get("/handlers/{handler_id}/profile")
+async def get_handler_profile(handler_id: str):
+    """Get handler's complete profile"""
+    if not ObjectId.is_valid(handler_id):
+        raise HTTPException(status_code=400, detail="Invalid handler ID")
     
-    professional = await db.users.find_one({
-        "_id": ObjectId(professional_id),
-        "user_type": "professional"
+    handler = await db.users.find_one({
+        "_id": ObjectId(handler_id),
+        "user_type": "handler"
     })
     
-    if not professional:
-        raise HTTPException(status_code=404, detail="Professional not found")
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
     
     # Get statistics
-    total_bookings = await db.bookings.count_documents({"professional_id": professional_id})
+    total_bookings = await db.bookings.count_documents({"handler_id": handler_id})
     completed_bookings = await db.bookings.count_documents({
-        "professional_id": professional_id,
+        "handler_id": handler_id,
         "status": "completed"
     })
     
     # Calculate average rating
-    reviews = await db.reviews.find({"professional_id": professional_id}).to_list(None)
+    reviews = await db.reviews.find({"handler_id": handler_id}).to_list(None)
     avg_rating = sum(r.get("rating", 0) for r in reviews) / len(reviews) if reviews else 0
     
     # Get availability
-    availability = await db.availability.find_one({"professional_id": professional_id})
+    availability = await db.availability.find_one({"handler_id": handler_id})
     
     profile = {
-        "id": str(professional["_id"]),
-        "name": professional.get("name"),
-        "email": professional.get("email"),
-        "bio": professional.get("bio", ""),
-        "skills": professional.get("skills", []),
-        "hourly_rate": professional.get("hourly_rate", 0),
-        "years_experience": professional.get("years_experience", 0),
-        "certifications": professional.get("certifications", []),
-        "service_area": professional.get("service_area", []),
-        "profile_image_url": professional.get("profile_image_url"),
+        "id": str(handler["_id"]),
+        "name": handler.get("name"),
+        "email": handler.get("email"),
+        "bio": handler.get("bio", ""),
+        "skills": handler.get("skills", []),
+        "hourly_rate": handler.get("hourly_rate", 0),
+        "years_experience": handler.get("years_experience", 0),
+        "certifications": handler.get("certifications", []),
+        "service_area": handler.get("service_area", []),
+        "profile_image_url": handler.get("profile_image_url"),
         "rating": round(avg_rating, 2),
         "review_count": len(reviews),
         "total_jobs": total_bookings,
         "completed_jobs": completed_bookings,
         "availability": availability.get("slots", []) if availability else [],
-        "joined_date": professional.get("created_at"),
+        "joined_date": handler.get("created_at"),
     }
     
     return profile
 
-@api_router.put("/professionals/{professional_id}/profile")
-async def update_professional_profile(professional_id: str, update: ProfessionalProfileUpdate):
-    """Update professional profile"""
-    if not ObjectId.is_valid(professional_id):
-        raise HTTPException(status_code=400, detail="Invalid professional ID")
+@api_router.put("/handlers/{handler_id}/profile")
+async def update_handler_profile(handler_id: str, update: HandlerProfileUpdate):
+    """Update handler profile"""
+    if not ObjectId.is_valid(handler_id):
+        raise HTTPException(status_code=400, detail="Invalid handler ID")
     
     update_data = {k: v for k, v in update.dict().items() if v is not None}
     
@@ -1109,24 +1109,24 @@ async def update_professional_profile(professional_id: str, update: Professional
         raise HTTPException(status_code=400, detail="No update data provided")
     
     result = await db.users.update_one(
-        {"_id": ObjectId(professional_id), "user_type": "professional"},
+        {"_id": ObjectId(handler_id), "user_type": "handler"},
         {"$set": update_data}
     )
     
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Professional not found")
+        raise HTTPException(status_code=404, detail="Handler not found")
     
     return {"message": "Profile updated successfully"}
 
 # Job Management
-@api_router.get("/professionals/{professional_id}/jobs")
-async def get_professional_jobs(
-    professional_id: str,
+@api_router.get("/handlers/{handler_id}/jobs")
+async def get_handler_jobs(
+    handler_id: str,
     status: Optional[str] = None,
     limit: int = 50
 ):
-    """Get all jobs for a professional with optional status filter"""
-    query = {"professional_id": professional_id}
+    """Get all jobs for a handler with optional status filter"""
+    query = {"handler_id": handler_id}
     
     if status:
         query["status"] = status
@@ -1156,8 +1156,8 @@ async def get_professional_jobs(
     
     return {"jobs": jobs, "total": len(jobs)}
 
-@api_router.put("/professionals/{professional_id}/jobs/{job_id}/status")
-async def update_job_status(professional_id: str, job_id: str, status: str):
+@api_router.put("/handlers/{handler_id}/jobs/{job_id}/status")
+async def update_job_status(handler_id: str, job_id: str, status: str):
     """Update job status"""
     valid_statuses = ["confirmed", "in_progress", "completed", "cancelled"]
     
@@ -1168,7 +1168,7 @@ async def update_job_status(professional_id: str, job_id: str, status: str):
         raise HTTPException(status_code=400, detail="Invalid job ID")
     
     result = await db.bookings.update_one(
-        {"_id": ObjectId(job_id), "professional_id": professional_id},
+        {"_id": ObjectId(job_id), "handler_id": handler_id},
         {"$set": {"status": status, "updated_at": datetime.utcnow()}}
     )
     
@@ -1178,15 +1178,15 @@ async def update_job_status(professional_id: str, job_id: str, status: str):
     return {"message": "Job status updated successfully", "new_status": status}
 
 # Earnings Tracking
-@api_router.get("/professionals/{professional_id}/earnings")
-async def get_professional_earnings(
-    professional_id: str,
+@api_router.get("/handlers/{handler_id}/earnings")
+async def get_handler_earnings(
+    handler_id: str,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ):
-    """Get earnings summary for a professional"""
+    """Get earnings summary for a handler"""
     query = {
-        "professional_id": professional_id,
+        "handler_id": handler_id,
         "status": "completed"
     }
     
@@ -1218,7 +1218,7 @@ async def get_professional_earnings(
     now = datetime.utcnow()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     month_earnings_cursor = db.bookings.find({
-        "professional_id": professional_id,
+        "handler_id": handler_id,
         "status": "completed",
         "scheduled_time": {"$gte": month_start.isoformat()}
     })
@@ -1238,22 +1238,22 @@ async def get_professional_earnings(
     }
 
 # Availability Management
-@api_router.get("/professionals/{professional_id}/availability")
-async def get_professional_availability(professional_id: str):
-    """Get professional's availability schedule"""
-    availability = await db.availability.find_one({"professional_id": professional_id})
+@api_router.get("/handlers/{handler_id}/availability")
+async def get_handler_availability(handler_id: str):
+    """Get handler's availability schedule"""
+    availability = await db.availability.find_one({"handler_id": handler_id})
     
     if not availability:
         # Return default empty availability
-        return {"professional_id": professional_id, "slots": []}
+        return {"handler_id": handler_id, "slots": []}
     
     availability["id"] = str(availability["_id"])
     del availability["_id"]
     return availability
 
-@api_router.post("/professionals/{professional_id}/availability")
-async def set_professional_availability(professional_id: str, slots: List[AvailabilitySlot]):
-    """Set professional's availability schedule"""
+@api_router.post("/handlers/{handler_id}/availability")
+async def set_handler_availability(handler_id: str, slots: List[AvailabilitySlot]):
+    """Set handler's availability schedule"""
     # Validate slots
     for slot in slots:
         if not (0 <= slot.day_of_week <= 6):
@@ -1263,9 +1263,9 @@ async def set_professional_availability(professional_id: str, slots: List[Availa
     
     # Upsert availability
     result = await db.availability.update_one(
-        {"professional_id": professional_id},
+        {"handler_id": handler_id},
         {"$set": {
-            "professional_id": professional_id,
+            "handler_id": handler_id,
             "slots": slots_dict,
             "updated_at": datetime.utcnow()
         }},
@@ -1285,7 +1285,7 @@ async def create_review(review: ReviewModel):
     booking = await db.bookings.find_one({
         "_id": ObjectId(review.booking_id),
         "customer_id": review.customer_id,
-        "professional_id": review.professional_id,
+        "handler_id": review.handler_id,
         "status": "completed"
     })
     
@@ -1306,16 +1306,16 @@ async def create_review(review: ReviewModel):
     
     result = await db.reviews.insert_one(review_dict)
     
-    # Update professional's overall rating
-    await update_professional_rating(review.professional_id)
+    # Update handler's overall rating
+    await update_handler_rating(review.handler_id)
     
     return {"message": "Review created successfully", "review_id": str(result.inserted_id)}
 
-@api_router.get("/reviews/professional/{professional_id}")
-async def get_professional_reviews(professional_id: str, limit: int = 50):
-    """Get all reviews for a professional"""
+@api_router.get("/reviews/handler/{handler_id}")
+async def get_handler_reviews(handler_id: str, limit: int = 50):
+    """Get all reviews for a handler"""
     reviews = []
-    async for review in db.reviews.find({"professional_id": professional_id}).sort("created_at", -1).limit(limit):
+    async for review in db.reviews.find({"handler_id": handler_id}).sort("created_at", -1).limit(limit):
         # Get customer info
         customer = await db.users.find_one({"_id": ObjectId(review["customer_id"])})
         
@@ -1332,7 +1332,7 @@ async def get_professional_reviews(professional_id: str, limit: int = 50):
             "rating": review["rating"],
             "comment": review.get("comment", ""),
             "service_quality": review.get("service_quality", 5),
-            "professionalism": review.get("professionalism", 5),
+            "handlerism": review.get("handlerism", 5),
             "timeliness": review.get("timeliness", 5),
             "customer_name": customer.get("name") if customer else "Anonymous",
             "service_name": service_name,
@@ -1384,9 +1384,9 @@ async def admin_get_users(
     users = []
     async for user in db.users.find(query).limit(limit):
         # Get additional stats
-        if user.get("user_type") == "professional":
-            total_jobs = await db.bookings.count_documents({"professional_id": str(user["_id"])})
-            reviews = await db.reviews.find({"professional_id": str(user["_id"])}).to_list(None)
+        if user.get("user_type") == "handler":
+            total_jobs = await db.bookings.count_documents({"handler_id": str(user["_id"])})
+            reviews = await db.reviews.find({"handler_id": str(user["_id"])}).to_list(None)
             avg_rating = sum(r.get("rating", 0) for r in reviews) / len(reviews) if reviews else 0
         else:
             total_jobs = await db.bookings.count_documents({"customer_id": str(user["_id"])})
@@ -1420,14 +1420,14 @@ async def admin_get_user(user_id: str):
     bookings = await db.bookings.find({
         "$or": [
             {"customer_id": user_id},
-            {"professional_id": user_id}
+            {"handler_id": user_id}
         ]
     }).to_list(20)
     
-    # Get reviews if professional
+    # Get reviews if handler
     reviews = []
-    if user.get("user_type") == "professional":
-        reviews = await db.reviews.find({"professional_id": user_id}).to_list(10)
+    if user.get("user_type") == "handler":
+        reviews = await db.reviews.find({"handler_id": user_id}).to_list(10)
     
     user_detail = {
         "id": str(user["_id"]),
@@ -1476,7 +1476,7 @@ async def admin_delete_user(user_id: str):
     active_bookings = await db.bookings.count_documents({
         "$or": [
             {"customer_id": user_id, "status": {"$in": ["pending", "confirmed", "in_progress"]}},
-            {"professional_id": user_id, "status": {"$in": ["pending", "confirmed", "in_progress"]}}
+            {"handler_id": user_id, "status": {"$in": ["pending", "confirmed", "in_progress"]}}
         ]
     })
     
@@ -1520,17 +1520,17 @@ async def admin_get_bookings(
     
     bookings = []
     async for booking in db.bookings.find(query).sort("created_at", -1).limit(limit):
-        # Get service, customer, and professional info
+        # Get service, customer, and handler info
         service = await db.services.find_one({"_id": ObjectId(booking["service_id"])})
         customer = await db.users.find_one({"_id": ObjectId(booking["customer_id"])})
-        professional = await db.users.find_one({"_id": ObjectId(booking.get("professional_id", "000000000000000000000000"))})
+        handler = await db.users.find_one({"_id": ObjectId(booking.get("handler_id", "000000000000000000000000"))})
         
         bookings.append({
             "id": str(booking["_id"]),
             "service_name": service.get("name") if service else "Unknown",
             "service_price": service.get("fixed_price") if service else 0,
             "customer_name": customer.get("name") if customer else "Unknown",
-            "professional_name": professional.get("name") if professional else "Unassigned",
+            "handler_name": handler.get("name") if handler else "Unassigned",
             "status": booking["status"],
             "scheduled_time": booking["scheduled_time"],
             "created_at": booking.get("created_at"),
@@ -1776,14 +1776,14 @@ async def delete_promo_code(code: str):
     del review["_id"]
     return {"review": review}
 
-async def update_professional_rating(professional_id: str):
-    """Helper function to update professional's average rating"""
-    reviews = await db.reviews.find({"professional_id": professional_id}).to_list(None)
+async def update_handler_rating(handler_id: str):
+    """Helper function to update handler's average rating"""
+    reviews = await db.reviews.find({"handler_id": handler_id}).to_list(None)
     
     if reviews:
         avg_rating = sum(r.get("rating", 0) for r in reviews) / len(reviews)
         await db.users.update_one(
-            {"_id": ObjectId(professional_id)},
+            {"_id": ObjectId(handler_id)},
             {"$set": {"rating": round(avg_rating, 2), "review_count": len(reviews)}}
         )
 
