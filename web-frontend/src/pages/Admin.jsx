@@ -316,11 +316,34 @@ export default function Admin() {
               <CardHeader>
                 <CardTitle>Featured Categories</CardTitle>
                 <CardDescription>
-                  Manage which categories are featured on the home screen
+                  Select categories to be featured on the mobile home screen. Categories rotate randomly.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500">Featured categories management coming soon...</p>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Featured categories appear prominently on the customer home screen with highlighted service listings.
+                    Select multiple categories to create a rotation pool.
+                  </p>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Note:</strong> This feature requires backend integration. Currently showing all available categories.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                    {['Cleaning', 'Plumbing', 'Electrical', 'HVAC', 'Appliances', 'Handyman', 'Painting', 'Landscaping', 'Pest Control', 'Locksmith'].map((category) => (
+                      <div key={category} className="p-4 border-2 border-orange-200 rounded-lg hover:border-orange-400 cursor-pointer transition-colors">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{category}</span>
+                          <input type="checkbox" className="w-5 h-5 text-orange-500" defaultChecked />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full bg-orange-500 hover:bg-orange-600 mt-4">
+                    Save Featured Categories
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -329,10 +352,55 @@ export default function Admin() {
             <Card>
               <CardHeader>
                 <CardTitle>Category Icons</CardTitle>
-                <CardDescription>Customize icons and colors for each category</CardDescription>
+                <CardDescription>Customize the icon and color for each service category</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500">Category icon management coming soon...</p>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    These icons and colors appear in the category grid on the mobile home screen.
+                  </p>
+                  <div className="space-y-3">
+                    {[
+                      { name: 'Cleaning', icon: 'sparkles', color: '#4CAF50' },
+                      { name: 'Plumbing', icon: 'water', color: '#2196F3' },
+                      { name: 'Electrical', icon: 'flash', color: '#FFB800' },
+                      { name: 'HVAC', icon: 'snow', color: '#00BCD4' },
+                      { name: 'Appliances', icon: 'construct', color: '#9C27B0' },
+                      { name: 'Handyman', icon: 'hammer', color: '#FF6B00' },
+                      { name: 'Painting', icon: 'color-palette', color: '#E91E63' },
+                      { name: 'Landscaping', icon: 'leaf', color: '#4CAF50' },
+                      { name: 'Pest Control', icon: 'bug', color: '#F44336' },
+                      { name: 'Locksmith', icon: 'key', color: '#607D8B' },
+                    ].map((category) => (
+                      <div key={category.name} className="flex items-center gap-4 p-3 border rounded-lg">
+                        <div 
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
+                          style={{ backgroundColor: category.color }}
+                        >
+                          {category.icon.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{category.name}</p>
+                          <p className="text-sm text-gray-500">Icon: {category.icon}</p>
+                        </div>
+                        <Input 
+                          type="text" 
+                          defaultValue={category.icon}
+                          className="w-40"
+                          placeholder="Icon name"
+                        />
+                        <Input 
+                          type="color" 
+                          defaultValue={category.color}
+                          className="w-20 h-10"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full bg-orange-500 hover:bg-orange-600 mt-4">
+                    Save Category Icons
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
