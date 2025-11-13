@@ -1352,6 +1352,426 @@ async def get_booking_review(booking_id: str):
     if not review:
         return {"review": None}
     
+
+
+# ==================== Admin Platform Expansion ====================
+
+class PromoCodeModel(BaseModel):
+    code: str
+    discount_type: str  # 'percentage' or 'fixed'
+    discount_value: float
+    max_uses: Optional[int] = None
+    expiry_date: Optional[str] = None
+    active: bool = True
+    applicable_services: Optional[List[str]] = None
+
+# User Management
+@api_router.get("/admin/users")
+async def admin_get_users(
+    user_type: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 100
+):
+    """Get all users with optional filters"""
+    query = {}
+    
+    if user_type:
+        query["user_type"] = user_type
+    
+    if status:
+        query["status"] = status
+    
+    users = []
+    async for user in db.users.find(query).limit(limit):
+        # Get additional stats
+        if user.get("user_type") == "professional":
+            total_jobs = await db.bookings.count_documents({"professional_id": str(user["_id"])})
+            reviews = await db.reviews.find({"professional_id": str(user["_id"])}).to_list(None)
+            avg_rating = sum(r.get("rating", 0) for r in reviews) / len(reviews) if reviews else 0
+        else:
+            total_jobs = await db.bookings.count_documents({"customer_id": str(user["_id"])})
+            avg_rating = 0
+        
+        users.append({
+            "id": str(user["_id"]),
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "user_type": user.get("user_type"),
+            "status": user.get("status", "active"),
+            "created_at": user.get("created_at"),
+            "total_jobs": total_jobs,
+            "rating": round(avg_rating, 2) if avg_rating else None,
+        })
+    
+    return {"users": users, "total": len(users)}
+
+@api_router.get("/admin/users/{user_id}")
+async def admin_get_user(user_id: str):
+    """Get detailed user information"""
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get bookings
+    bookings = await db.bookings.find({
+        "$or": [
+            {"customer_id": user_id},
+            {"professional_id": user_id}
+        ]
+    }).to_list(20)
+    
+    # Get reviews if professional
+    reviews = []
+    if user.get("user_type") == "professional":
+        reviews = await db.reviews.find({"professional_id": user_id}).to_list(10)
+    
+    user_detail = {
+        "id": str(user["_id"]),
+        "name": user.get("name"),
+        "email": user.get("email"),
+        "user_type": user.get("user_type"),
+        "status": user.get("status", "active"),
+        "created_at": user.get("created_at"),
+        "bio": user.get("bio"),
+        "skills": user.get("skills", []),
+        "rating": user.get("rating"),
+        "recent_bookings": len(bookings),
+        "review_count": len(reviews),
+    }
+    
+    return user_detail
+
+@api_router.put("/admin/users/{user_id}/status")
+async def admin_update_user_status(user_id: str, status: str):
+    """Update user status (active, suspended, banned)"""
+    valid_statuses = ["active", "suspended", "banned"]
+    
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+    
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"status": status, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User status updated successfully", "new_status": status}
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str):
+    """Delete a user (soft delete by setting status to deleted)"""
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    # Check for active bookings
+    active_bookings = await db.bookings.count_documents({
+        "$or": [
+            {"customer_id": user_id, "status": {"$in": ["pending", "confirmed", "in_progress"]}},
+            {"professional_id": user_id, "status": {"$in": ["pending", "confirmed", "in_progress"]}}
+        ]
+    })
+    
+    if active_bookings > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete user with {active_bookings} active bookings"
+        )
+    
+    # Soft delete
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"status": "deleted", "deleted_at": datetime.utcnow()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User deleted successfully"}
+
+# Booking Management
+@api_router.get("/admin/bookings")
+async def admin_get_bookings(
+    status: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: int = 100
+):
+    """Get all bookings with filters"""
+    query = {}
+    
+    if status:
+        query["status"] = status
+    
+    if start_date or end_date:
+        query["scheduled_time"] = {}
+        if start_date:
+            query["scheduled_time"]["$gte"] = start_date
+        if end_date:
+            query["scheduled_time"]["$lte"] = end_date
+    
+    bookings = []
+    async for booking in db.bookings.find(query).sort("created_at", -1).limit(limit):
+        # Get service, customer, and professional info
+        service = await db.services.find_one({"_id": ObjectId(booking["service_id"])})
+        customer = await db.users.find_one({"_id": ObjectId(booking["customer_id"])})
+        professional = await db.users.find_one({"_id": ObjectId(booking.get("professional_id", "000000000000000000000000"))})
+        
+        bookings.append({
+            "id": str(booking["_id"]),
+            "service_name": service.get("name") if service else "Unknown",
+            "service_price": service.get("fixed_price") if service else 0,
+            "customer_name": customer.get("name") if customer else "Unknown",
+            "professional_name": professional.get("name") if professional else "Unassigned",
+            "status": booking["status"],
+            "scheduled_time": booking["scheduled_time"],
+            "created_at": booking.get("created_at"),
+        })
+    
+    return {"bookings": bookings, "total": len(bookings)}
+
+@api_router.put("/admin/bookings/{booking_id}/status")
+async def admin_update_booking_status(booking_id: str, status: str):
+    """Admin override booking status"""
+    valid_statuses = ["pending", "confirmed", "in_progress", "completed", "cancelled"]
+    
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status")
+    
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    result = await db.bookings.update_one(
+        {"_id": ObjectId(booking_id)},
+        {"$set": {"status": status, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    return {"message": "Booking status updated", "new_status": status}
+
+@api_router.delete("/admin/bookings/{booking_id}")
+async def admin_delete_booking(booking_id: str):
+    """Delete a booking"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    result = await db.bookings.delete_one({"_id": ObjectId(booking_id)})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    return {"message": "Booking deleted successfully"}
+
+# Analytics
+@api_router.get("/admin/analytics")
+async def get_admin_analytics(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get comprehensive platform analytics"""
+    # Date range for bookings
+    booking_query = {}
+    if start_date or end_date:
+        booking_query["created_at"] = {}
+        if start_date:
+            booking_query["created_at"]["$gte"] = datetime.fromisoformat(start_date)
+        if end_date:
+            booking_query["created_at"]["$lte"] = datetime.fromisoformat(end_date)
+    
+    # Booking statistics
+    total_bookings = await db.bookings.count_documents(booking_query)
+    pending = await db.bookings.count_documents({**booking_query, "status": "pending"})
+    confirmed = await db.bookings.count_documents({**booking_query, "status": "confirmed"})
+    in_progress = await db.bookings.count_documents({**booking_query, "status": "in_progress"})
+    completed = await db.bookings.count_documents({**booking_query, "status": "completed"})
+    cancelled = await db.bookings.count_documents({**booking_query, "status": "cancelled"})
+    
+    # Revenue calculation
+    revenue_pipeline = [
+        {"$match": {**booking_query, "status": "completed"}},
+        {"$lookup": {
+            "from": "services",
+            "localField": "service_id",
+            "foreignField": "_id",
+            "as": "service"
+        }},
+        {"$unwind": "$service"},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": "$service.fixed_price"}
+        }}
+    ]
+    
+    revenue_result = await db.bookings.aggregate(revenue_pipeline).to_list(1)
+    total_revenue = revenue_result[0]["total"] if revenue_result else 0
+    
+    # Top services
+    top_services_pipeline = [
+        {"$match": booking_query},
+        {"$group": {
+            "_id": "$service_id",
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]
+    
+    top_services_result = await db.bookings.aggregate(top_services_pipeline).to_list(5)
+    top_services = []
+    for item in top_services_result:
+        service = await db.services.find_one({"_id": ObjectId(item["_id"])})
+        if service:
+            top_services.append({
+                "service_name": service.get("name"),
+                "bookings": item["count"]
+            })
+    
+    # Growth metrics (compare with previous period)
+    if start_date and end_date:
+        start = datetime.fromisoformat(start_date)
+        end = datetime.fromisoformat(end_date)
+        period_length = (end - start).days
+        
+        prev_start = start - timedelta(days=period_length)
+        prev_query = {
+            "created_at": {
+                "$gte": prev_start,
+                "$lt": start
+            }
+        }
+        
+        prev_bookings = await db.bookings.count_documents(prev_query)
+        prev_completed = await db.bookings.count_documents({**prev_query, "status": "completed"})
+        
+        # Calculate revenue for previous period
+        prev_revenue_result = await db.bookings.aggregate([
+            {"$match": {**prev_query, "status": "completed"}},
+            {"$lookup": {
+                "from": "services",
+                "localField": "service_id",
+                "foreignField": "_id",
+                "as": "service"
+            }},
+            {"$unwind": "$service"},
+            {"$group": {"_id": None, "total": {"$sum": "$service.fixed_price"}}}
+        ]).to_list(1)
+        
+        prev_revenue = prev_revenue_result[0]["total"] if prev_revenue_result else 0
+        
+        booking_growth = ((total_bookings - prev_bookings) / prev_bookings * 100) if prev_bookings > 0 else 0
+        revenue_growth = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
+    else:
+        booking_growth = 0
+        revenue_growth = 0
+    
+    return {
+        "bookings": {
+            "total": total_bookings,
+            "pending": pending,
+            "confirmed": confirmed,
+            "in_progress": in_progress,
+            "completed": completed,
+            "cancelled": cancelled,
+            "completion_rate": (completed / total_bookings * 100) if total_bookings > 0 else 0,
+        },
+        "revenue": {
+            "total": total_revenue,
+            "average_per_booking": total_revenue / completed if completed > 0 else 0,
+        },
+        "growth": {
+            "bookings": round(booking_growth, 2),
+            "revenue": round(revenue_growth, 2),
+        },
+        "top_services": top_services,
+    }
+
+# Promo Code System
+@api_router.post("/admin/promo-codes")
+async def create_promo_code(promo: PromoCodeModel):
+    """Create a new promo code"""
+    # Check if code already exists
+    existing = await db.promo_codes.find_one({"code": promo.code.upper()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Promo code already exists")
+    
+    promo_dict = promo.dict()
+    promo_dict["code"] = promo_dict["code"].upper()
+    promo_dict["uses_count"] = 0
+    promo_dict["created_at"] = datetime.utcnow()
+    
+    result = await db.promo_codes.insert_one(promo_dict)
+    
+    return {"message": "Promo code created successfully", "code": promo.code.upper()}
+
+@api_router.get("/admin/promo-codes")
+async def get_all_promo_codes():
+    """Get all promo codes"""
+    promo_codes = []
+    async for promo in db.promo_codes.find().sort("created_at", -1):
+        promo["id"] = str(promo["_id"])
+        del promo["_id"]
+        promo_codes.append(promo)
+    
+    return {"promo_codes": promo_codes, "total": len(promo_codes)}
+
+@api_router.get("/promo-codes/{code}")
+async def validate_promo_code(code: str):
+    """Validate a promo code"""
+    promo = await db.promo_codes.find_one({"code": code.upper(), "active": True})
+    
+    if not promo:
+        raise HTTPException(status_code=404, detail="Invalid or inactive promo code")
+    
+    # Check expiry
+    if promo.get("expiry_date"):
+        expiry = datetime.fromisoformat(promo["expiry_date"])
+        if datetime.utcnow() > expiry:
+            raise HTTPException(status_code=400, detail="Promo code has expired")
+    
+    # Check max uses
+    if promo.get("max_uses"):
+        if promo.get("uses_count", 0) >= promo["max_uses"]:
+            raise HTTPException(status_code=400, detail="Promo code usage limit reached")
+    
+    return {
+        "valid": True,
+        "discount_type": promo["discount_type"],
+        "discount_value": promo["discount_value"],
+    }
+
+@api_router.put("/admin/promo-codes/{code}/deactivate")
+async def deactivate_promo_code(code: str):
+    """Deactivate a promo code"""
+    result = await db.promo_codes.update_one(
+        {"code": code.upper()},
+        {"$set": {"active": False}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Promo code not found")
+    
+    return {"message": "Promo code deactivated"}
+
+@api_router.delete("/admin/promo-codes/{code}")
+async def delete_promo_code(code: str):
+    """Delete a promo code"""
+    result = await db.promo_codes.delete_one({"code": code.upper()})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Promo code not found")
+    
+    return {"message": "Promo code deleted"}
+
     review["id"] = str(review["_id"])
     del review["_id"]
     return {"review": review}
