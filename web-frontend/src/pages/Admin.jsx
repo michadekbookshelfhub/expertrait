@@ -201,8 +201,9 @@ export default function Admin() {
 
         {/* Management Tabs */}
         <Tabs defaultValue="banners" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="banners">Banners</TabsTrigger>
+            <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="categories">Featured Categories</TabsTrigger>
             <TabsTrigger value="icons">Category Icons</TabsTrigger>
           </TabsList>
