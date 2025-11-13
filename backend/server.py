@@ -1598,7 +1598,37 @@ async def get_admin_analytics(
     
     # Revenue calculation
     revenue_pipeline = [
-
+        {"$match": {**booking_query, "status": "completed"}},
+        {"$lookup": {
+            "from": "services",
+            "localField": "service_id",
+            "foreignField": "_id",
+            "as": "service"
+        }},
+        {"$unwind": "$service"},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": "$service.fixed_price"}
+        }}
+    ]
+    
+    revenue_result = await db.bookings.aggregate(revenue_pipeline).to_list(1)
+    total_revenue = revenue_result[0]["total"] if revenue_result else 0
+    
+    return {
+        "bookings": {
+            "total": total_bookings,
+            "pending": pending,
+            "confirmed": confirmed,
+            "in_progress": in_progress,
+            "completed": completed,
+            "cancelled": cancelled,
+        },
+        "revenue": {
+            "total": total_revenue,
+            "average_per_booking": total_revenue / completed if completed > 0 else 0,
+        }
+    }
 
 # ==================== Chat System ====================
 
