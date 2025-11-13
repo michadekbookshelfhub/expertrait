@@ -1913,16 +1913,6 @@ async def get_booking_handler_profile(booking_id: str):
     }
     
     return {"handler": handler_profile}
-
-        {"$match": {**booking_query, "status": "completed"}},
-        {"$lookup": {
-            "from": "services",
-            "localField": "service_id",
-            "foreignField": "_id",
-            "as": "service"
-        }},
-        {"$unwind": "$service"},
-        {"$group": {
             "_id": None,
             "total": {"$sum": "$service.fixed_price"}
         }}
