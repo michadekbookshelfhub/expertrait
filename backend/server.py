@@ -1913,6 +1913,9 @@ async def get_booking_handler_profile(booking_id: str):
     }
     
     return {"handler": handler_profile}
+
+# Promo Code System  
+@api_router.post("/admin/promo-codes")
 async def create_promo_code(promo: PromoCodeModel):
     """Create a new promo code"""
     # Check if code already exists
