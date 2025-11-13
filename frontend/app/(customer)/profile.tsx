@@ -96,7 +96,7 @@ export default function Profile() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
           
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Help Center', 'Need help?\n\nEmail: support@expertrait.com\nPhone: 1-800-EXPERT\n\nAvailable 24/7')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(customer)/help-center')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="help-circle-outline" size={24} color="#FF6B00" />
               <Text style={styles.menuItemText}>Help Center</Text>
