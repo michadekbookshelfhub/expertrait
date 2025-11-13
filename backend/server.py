@@ -920,6 +920,105 @@ async def get_admin_stats():
         }
     }
 
+# ==================== Admin Service Management ====================
+
+class ServiceUpdate(BaseModel):
+    category: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    fixed_price: Optional[float] = None
+    estimated_duration: Optional[int] = None
+    image_url: Optional[str] = None
+
+@api_router.get("/admin/services")
+async def admin_get_all_services():
+    """Get all services for admin management"""
+    services = []
+    async for service in db.services.find().sort("category", 1):
+        service["id"] = str(service["_id"])
+        del service["_id"]
+        services.append(service)
+    return {"services": services, "total": len(services)}
+
+@api_router.get("/admin/services/{service_id}")
+async def admin_get_service(service_id: str):
+    """Get single service details for editing"""
+    if not ObjectId.is_valid(service_id):
+        raise HTTPException(status_code=400, detail="Invalid service ID")
+    
+    service = await db.services.find_one({"_id": ObjectId(service_id)})
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    service["id"] = str(service["_id"])
+    del service["_id"]
+    return service
+
+@api_router.put("/admin/services/{service_id}")
+async def admin_update_service(service_id: str, update: ServiceUpdate):
+    """Update service details"""
+    if not ObjectId.is_valid(service_id):
+        raise HTTPException(status_code=400, detail="Invalid service ID")
+    
+    update_data = {k: v for k, v in update.dict().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update data provided")
+    
+    result = await db.services.update_one(
+        {"_id": ObjectId(service_id)},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    # Get updated service
+    updated_service = await db.services.find_one({"_id": ObjectId(service_id)})
+    updated_service["id"] = str(updated_service["_id"])
+    del updated_service["_id"]
+    
+    return {"message": "Service updated successfully", "service": updated_service}
+
+@api_router.post("/admin/services")
+async def admin_create_service(service: ServiceCreate):
+    """Create new service"""
+    service_dict = service.dict()
+    service_dict["created_at"] = datetime.utcnow()
+    
+    result = await db.services.insert_one(service_dict)
+    created_service = await db.services.find_one({"_id": result.inserted_id})
+    created_service["id"] = str(created_service["_id"])
+    del created_service["_id"]
+    
+    return {"message": "Service created successfully", "service": created_service}
+
+@api_router.delete("/admin/services/{service_id}")
+async def admin_delete_service(service_id: str):
+    """Delete a service"""
+    if not ObjectId.is_valid(service_id):
+        raise HTTPException(status_code=400, detail="Invalid service ID")
+    
+    # Check if service has active bookings
+    active_bookings = await db.bookings.count_documents({
+        "service_id": ObjectId(service_id),
+        "status": {"$in": ["pending", "confirmed", "in_progress"]}
+    })
+    
+    if active_bookings > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete service with {active_bookings} active bookings"
+        )
+    
+    result = await db.services.delete_one({"_id": ObjectId(service_id)})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    return {"message": "Service deleted successfully"}
+
+
 # Root routes
 @api_router.get("/")
 async def root():
