@@ -93,7 +93,10 @@ export default function Bookings() {
   const renderBookingCard = ({ item }: { item: Booking }) => (
     <TouchableOpacity
       style={styles.bookingCard}
-      onPress={() => setSelectedBooking(item)}
+      onPress={() => router.push({
+        pathname: '/(customer)/booking-detail',
+        params: { bookingId: item.id }
+      })}
     >
       <View style={styles.bookingHeader}>
         <Text style={styles.serviceName}>{item.service_name}</Text>
