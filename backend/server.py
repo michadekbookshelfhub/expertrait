@@ -2979,21 +2979,30 @@ async def register_partner(partner: PartnerCreate):
     await send_admin_alert_email(
         subject="🏥 New Partner Registration - ExperTrait",
         body=f"""
-        A new healthcare partner has registered:
-        
-        Organization: {partner.organization_name}
-        Contact: {partner.name}
-        Email: {partner.email}
-        Category: {partner.healthcare_category}
-        License: {partner.license_number}
-        
-        Please review and approve/reject from the admin dashboard.
-        Partner ID: {str(result.inserted_id)}
+        <h2>New Healthcare Partner Registration</h2>
+        <h3>Representative Details:</h3>
+        <ul>
+            <li>Full Name: {partner.representative_full_name}</li>
+            <li>Phone: {partner.representative_phone}</li>
+            <li>Address: {partner.representative_address}</li>
+            <li>Job Role: {partner.representative_job_role}</li>
+        </ul>
+        <h3>Company Details:</h3>
+        <ul>
+            <li>Organization: {partner.organization_name}</li>
+            <li>Company Phone: {partner.company_phone or 'Same as representative'}</li>
+            <li>Company Address: {partner.company_address}</li>
+            <li>Email: {partner.email}</li>
+            <li>Healthcare Category: {partner.healthcare_category}</li>
+            <li>License Number: {partner.license_number}</li>
+        </ul>
+        <p><strong>Partner ID:</strong> {str(result.inserted_id)}</p>
+        <p>Please review and approve/reject from the admin dashboard.</p>
         """
     )
     
     return {
-        "message": "Partner registration submitted. Pending admin approval.",
+        "message": "Your application has been submitted for approval. You will receive email and SMS notification once approved by ExperTrait Admin.",
         "partner_id": str(result.inserted_id),
         "status": "pending"
     }
