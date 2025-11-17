@@ -436,6 +436,43 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
+  skillsContainer: {
+    marginBottom: 20,
+  },
+  skillsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  skillChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    backgroundColor: '#FFF',
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  skillChipActive: {
+    backgroundColor: '#FF6B00',
+    borderColor: '#FF6B00',
+  },
+  skillChipText: {
+    fontSize: 13,
+    color: '#666',
+  },
+  skillChipTextActive: {
+    color: '#FFF',
+    fontWeight: '500',
+  },
+  selectedCountText: {
+    fontSize: 12,
+    color: '#FF6B00',
+    marginTop: 8,
+    fontWeight: '500',
+  },
   button: {
     backgroundColor: '#FF6B00',
     borderRadius: 12,
