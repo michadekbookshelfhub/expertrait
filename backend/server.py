@@ -2095,6 +2095,21 @@ class HandlerPartnerAssignment(BaseModel):
     partner_id: str
     admin_notes: Optional[str] = None
 
+# Stripe Connect Models
+class StripeConnectOnboarding(BaseModel):
+    handler_id: str
+    return_url: str
+    refresh_url: str
+
+class StripePayoutRequest(BaseModel):
+    handler_id: str
+    amount: float  # Amount in GBP
+    description: Optional[str] = None
+    booking_id: Optional[str] = None
+
+class StripeSettingsUpdate(BaseModel):
+    use_live_stripe: bool
+
 # Manual Booking Assignment
 @api_router.post("/admin/bookings/{booking_id}/assign")
 async def admin_assign_booking(booking_id: str, assignment: ManualBookingAssignment):
