@@ -229,6 +229,40 @@ class BulkBookingCreate(BaseModel):
     booking_type: str = "one-off"
     terms_agreed: bool = False
 
+class CheckInRequest(BaseModel):
+    booking_id: str
+    handler_id: str
+    latitude: float
+    longitude: float
+    check_in_photo: Optional[str] = None
+
+class CheckOutRequest(BaseModel):
+    booking_id: str
+    handler_id: str
+    latitude: float
+    longitude: float
+    check_out_photo: Optional[str] = None
+    completion_notes: Optional[str] = None
+
+class BankAccountModel(BaseModel):
+    account_holder_name: str
+    account_number: str
+    sort_code: str
+    bank_name: str
+
+class BankAccountUpdateRequest(BaseModel):
+    handler_id: str
+    bank_account: BankAccountModel
+
+class AvailabilitySlot(BaseModel):
+    date: str  # YYYY-MM-DD
+    available: bool
+    time_slots: Optional[List[str]] = []
+
+class HandlerAvailabilityUpdate(BaseModel):
+    handler_id: str
+    availability_slots: List[AvailabilitySlot]
+
 # ==================== Utility Functions ====================
 
 def hash_password(password: str) -> str:
