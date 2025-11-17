@@ -87,64 +87,39 @@ function _getCurrentPage(url) {
     return pageName || Object.keys(PAGES)[0];
 }
 
-// Create a wrapper component that uses useLocation inside the Router context
-function PagesContent() {
+// Wrapper component for pages that need Layout
+function WithLayout({ children }) {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-    
-    // Routes that don't need Layout wrapper (standalone pages)
-    const standaloneRoutes = ['/Admin', '/partner-login', '/partner-dashboard'];
-    const isStandalone = standaloneRoutes.some(route => 
-        location.pathname.toLowerCase() === route.toLowerCase()
-    );
-    
-    if (isStandalone) {
-        return (
-            <Routes>
-                <Route path="/Admin" element={<Admin />} />
-                <Route path="/partner-login" element={<PartnerLogin />} />
-                <Route path="/partner-dashboard" element={<PartnerDashboard />} />
-            </Routes>
-        );
-    }
-    
+    return <Layout currentPageName={currentPage}>{children}</Layout>;
+}
+
+// Create a wrapper component that uses useLocation inside the Router context
+function PagesContent() {
     return (
-        <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Home />} />
-                
-                
-                <Route path="/Home" element={<Home />} />
-                
-                <Route path="/About" element={<About />} />
-                
-                <Route path="/Services" element={<Services />} />
-                
-                <Route path="/ServiceDetail" element={<ServiceDetail />} />
-                
-                <Route path="/Blog" element={<Blog />} />
-                
-                <Route path="/BlogDetail" element={<BlogDetail />} />
-                
-                <Route path="/Contact" element={<Contact />} />
-                
-                <Route path="/Privacy" element={<Privacy />} />
-                
-                <Route path="/Terms" element={<Terms />} />
-                
-                <Route path="/Sitemap" element={<Sitemap />} />
-                
-                <Route path="/SitemapXML" element={<SitemapXML />} />
-                
-                <Route path="/DownloadApp" element={<DownloadApp />} />
-                
-                <Route path="/UserDashboard" element={<UserDashboard />} />
-                
-                <Route path="/HandlerDashboard" element={<HandlerDashboard />} />
-                
-            </Routes>
-        </Layout>
+        <Routes>
+            {/* Standalone pages (no layout) */}
+            <Route path="/Admin" element={<Admin />} />
+            <Route path="/partner-login" element={<PartnerLogin />} />
+            <Route path="/partner-dashboard" element={<PartnerDashboard />} />
+            
+            {/* Pages with Layout */}
+            <Route path="/" element={<WithLayout><Home /></WithLayout>} />
+            <Route path="/Home" element={<WithLayout><Home /></WithLayout>} />
+            <Route path="/About" element={<WithLayout><About /></WithLayout>} />
+            <Route path="/Services" element={<WithLayout><Services /></WithLayout>} />
+            <Route path="/ServiceDetail" element={<WithLayout><ServiceDetail /></WithLayout>} />
+            <Route path="/Blog" element={<WithLayout><Blog /></WithLayout>} />
+            <Route path="/BlogDetail" element={<WithLayout><BlogDetail /></WithLayout>} />
+            <Route path="/Contact" element={<WithLayout><Contact /></WithLayout>} />
+            <Route path="/Privacy" element={<WithLayout><Privacy /></WithLayout>} />
+            <Route path="/Terms" element={<WithLayout><Terms /></WithLayout>} />
+            <Route path="/Sitemap" element={<WithLayout><Sitemap /></WithLayout>} />
+            <Route path="/SitemapXML" element={<WithLayout><SitemapXML /></WithLayout>} />
+            <Route path="/DownloadApp" element={<WithLayout><DownloadApp /></WithLayout>} />
+            <Route path="/UserDashboard" element={<WithLayout><UserDashboard /></WithLayout>} />
+            <Route path="/HandlerDashboard" element={<WithLayout><HandlerDashboard /></WithLayout>} />
+        </Routes>
     );
 }
 
