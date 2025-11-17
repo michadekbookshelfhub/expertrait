@@ -362,6 +362,18 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 8,
   },
+  sectionTitleExcluded: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#D32F2F',
+    marginBottom: 12,
+  },
+  excludedText: {
+    fontSize: 14,
+    color: '#999',
+    marginLeft: 8,
+    textDecorationLine: 'line-through',
+  },
   footer: {
     position: 'absolute',
     bottom: 0,
