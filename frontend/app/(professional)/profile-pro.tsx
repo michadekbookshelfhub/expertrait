@@ -116,7 +116,7 @@ export default function ProfilePro() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Work</Text>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Availability', `Current status: ${user?.available ? 'Available' : 'Unavailable'}\n\nToggle from the dashboard`)}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/availability')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="time-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Availability</Text>
@@ -124,7 +124,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Service Areas', 'Manage your service coverage areas\n\nComing soon!')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/service-areas')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="location-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Service Areas</Text>
@@ -132,7 +132,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Reviews', `Your Rating: ${user?.rating || 5.0} ⭐\n\nView all customer reviews`)}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/reviews')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="star-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Reviews</Text>
