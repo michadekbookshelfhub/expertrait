@@ -13,33 +13,9 @@ export default function UserDashboard() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    loadUser();
+    // User dashboard is now mobile-only
+    setIsLoading(false);
   }, []);
-
-  const loadUser = async () => {
-    try {
-      const isAuthenticated = await base44.auth.isAuthenticated();
-      if (!isAuthenticated) {
-        base44.auth.redirectToLogin(createPageUrl("UserDashboard"));
-        return;
-      }
-
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error loading user:", error);
-      base44.auth.redirectToLogin(createPageUrl("UserDashboard"));
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-orange-50 py-8">
