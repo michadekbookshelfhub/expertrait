@@ -20,1119 +20,735 @@ HEALTHCARE_CATEGORIES = [
     "Support Worker (Sit-in)"
 ]
 
-class APITester:
+class PartnerAPITester:
     def __init__(self):
-        self.session = None
-        self.test_data = {}
-        self.results = {
-            "passed": 0,
-            "failed": 0,
-            "errors": []
+        self.session = requests.Session()
+        self.test_results = []
+        self.created_partners = []
+        self.created_handlers = []
+        self.created_bookings = []
+        
+    def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
+        """Log test results"""
+        result = {
+            "test": test_name,
+            "success": success,
+            "details": details,
+            "timestamp": datetime.now().isoformat(),
+            "response_data": response_data
         }
-    
-    async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
-        return self
-    
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.close()
-    
-    def log_result(self, test_name: str, success: bool, message: str = "", response_data: Any = None):
-        """Log test result"""
+        self.test_results.append(result)
         status = "✅ PASS" if success else "❌ FAIL"
         print(f"{status}: {test_name}")
-        if message:
-            print(f"   {message}")
-        if response_data and not success:
+        if details:
+            print(f"   Details: {details}")
+        if not success and response_data:
             print(f"   Response: {response_data}")
+        print()
+
+    def make_request(self, method: str, endpoint: str, data: Dict = None, params: Dict = None) -> tuple:
+        """Make HTTP request and return (success, response_data, status_code)"""
+        try:
+            url = f"{BASE_URL}{endpoint}"
+            
+            if method.upper() == "GET":
+                response = self.session.get(url, params=params)
+            elif method.upper() == "POST":
+                response = self.session.post(url, json=data)
+            elif method.upper() == "PUT":
+                response = self.session.put(url, json=data)
+            elif method.upper() == "PATCH":
+                response = self.session.patch(url, json=data)
+            elif method.upper() == "DELETE":
+                response = self.session.delete(url)
+            else:
+                return False, {"error": "Invalid HTTP method"}, 400
+            
+            try:
+                response_data = response.json()
+            except:
+                response_data = {"text": response.text}
+            
+            return response.status_code < 400, response_data, response.status_code
+            
+        except Exception as e:
+            return False, {"error": str(e)}, 500
+
+    # ==================== PRIORITY 1: Partner Registration & Authentication ====================
+    
+    def test_partner_registration_success(self):
+        """Test successful partner registration with all required fields"""
+        partner_data = {
+            "name": "Dr. Sarah Johnson",
+            "email": "sarah.johnson@healthcareplus.com",
+            "password": "SecurePass123!",
+            "organization_name": "HealthCare Plus Ltd",
+            "license_number": "HC-2024-001",
+            "phone": "+44 20 7946 0958",
+            "address": "123 Healthcare Street, London, UK",
+            "healthcare_category": "Mental Support Worker"
+        }
+        
+        success, response, status_code = self.make_request("POST", "/partner/register", partner_data)
+        
+        if success and "partner_id" in response:
+            self.created_partners.append({
+                "id": response["partner_id"],
+                "email": partner_data["email"],
+                "password": partner_data["password"],
+                "category": partner_data["healthcare_category"]
+            })
+            self.log_test(
+                "Partner Registration - Success Case",
+                True,
+                f"Partner registered with ID: {response['partner_id']}, Status: {response.get('status', 'unknown')}",
+                response
+            )
+        else:
+            self.log_test(
+                "Partner Registration - Success Case",
+                False,
+                f"Registration failed with status {status_code}",
+                response
+            )
+
+    def test_partner_registration_invalid_category(self):
+        """Test partner registration with invalid healthcare category"""
+        partner_data = {
+            "name": "Dr. Invalid Category",
+            "email": "invalid@test.com",
+            "password": "SecurePass123!",
+            "organization_name": "Invalid Care Ltd",
+            "license_number": "IC-2024-001",
+            "phone": "+44 20 7946 0959",
+            "address": "456 Invalid Street, London, UK",
+            "healthcare_category": "Invalid Category"
+        }
+        
+        success, response, status_code = self.make_request("POST", "/partner/register", partner_data)
+        
+        expected_failure = not success and status_code == 400
+        self.log_test(
+            "Partner Registration - Invalid Healthcare Category",
+            expected_failure,
+            f"Expected 400 error for invalid category, got {status_code}",
+            response
+        )
+
+    def test_partner_registration_duplicate_email(self):
+        """Test partner registration with duplicate email"""
+        if not self.created_partners:
+            self.log_test(
+                "Partner Registration - Duplicate Email",
+                False,
+                "No existing partner to test duplicate email",
+                {}
+            )
+            return
+            
+        partner_data = {
+            "name": "Dr. Duplicate Email",
+            "email": self.created_partners[0]["email"],  # Use existing email
+            "password": "AnotherPass123!",
+            "organization_name": "Duplicate Care Ltd",
+            "license_number": "DC-2024-001",
+            "phone": "+44 20 7946 0960",
+            "address": "789 Duplicate Street, London, UK",
+            "healthcare_category": "Baby Sitter"
+        }
+        
+        success, response, status_code = self.make_request("POST", "/partner/register", partner_data)
+        
+        expected_failure = not success and status_code == 400
+        self.log_test(
+            "Partner Registration - Duplicate Email Rejection",
+            expected_failure,
+            f"Expected 400 error for duplicate email, got {status_code}",
+            response
+        )
+
+    def test_partner_login_pending_status(self):
+        """Test partner login with pending status (should be rejected)"""
+        if not self.created_partners:
+            self.log_test(
+                "Partner Login - Pending Status Rejection",
+                False,
+                "No partner available for login test",
+                {}
+            )
+            return
+            
+        partner = self.created_partners[0]
+        login_data = {
+            "email": partner["email"],
+            "password": partner["password"]
+        }
+        
+        success, response, status_code = self.make_request("POST", "/partner/login", login_data)
+        
+        # Should fail with 403 because partner is still pending
+        expected_failure = not success and status_code == 403
+        self.log_test(
+            "Partner Login - Pending Status Rejection",
+            expected_failure,
+            f"Expected 403 error for pending partner, got {status_code}",
+            response
+        )
+
+    def test_partner_login_invalid_credentials(self):
+        """Test partner login with wrong password"""
+        if not self.created_partners:
+            self.log_test(
+                "Partner Login - Invalid Credentials",
+                False,
+                "No partner available for login test",
+                {}
+            )
+            return
+            
+        partner = self.created_partners[0]
+        login_data = {
+            "email": partner["email"],
+            "password": "WrongPassword123!"
+        }
+        
+        success, response, status_code = self.make_request("POST", "/partner/login", login_data)
+        
+        expected_failure = not success and status_code == 401
+        self.log_test(
+            "Partner Login - Invalid Credentials",
+            expected_failure,
+            f"Expected 401 error for wrong password, got {status_code}",
+            response
+        )
+
+    def test_partner_login_nonexistent_email(self):
+        """Test partner login with non-existent email"""
+        login_data = {
+            "email": "nonexistent@partner.com",
+            "password": "SomePassword123!"
+        }
+        
+        success, response, status_code = self.make_request("POST", "/partner/login", login_data)
+        
+        expected_failure = not success and status_code == 401
+        self.log_test(
+            "Partner Login - Non-existent Email",
+            expected_failure,
+            f"Expected 401 error for non-existent email, got {status_code}",
+            response
+        )
+
+    # ==================== PRIORITY 2: Admin Partner Management ====================
+    
+    def test_admin_approve_partner(self):
+        """Test admin approving a partner"""
+        if not self.created_partners:
+            self.log_test(
+                "Admin Partner Approval",
+                False,
+                "No partner available for approval test",
+                {}
+            )
+            return
+            
+        partner_id = self.created_partners[0]["id"]
+        
+        # Note: The API expects status as a query parameter, not in request body
+        success, response, status_code = self.make_request(
+            "PUT", 
+            f"/admin/partners/{partner_id}/status?status=approved"
+        )
         
         if success:
-            self.results["passed"] += 1
-        else:
-            self.results["failed"] += 1
-            self.results["errors"].append(f"{test_name}: {message}")
+            # Update partner status in our tracking
+            self.created_partners[0]["status"] = "approved"
+            
+        self.log_test(
+            "Admin Partner Approval",
+            success,
+            f"Partner approval status: {status_code}",
+            response
+        )
+
+    def test_admin_reject_partner(self):
+        """Test admin rejecting a partner"""
+        # Create another partner for rejection test
+        partner_data = {
+            "name": "Dr. Reject Test",
+            "email": "reject.test@healthcare.com",
+            "password": "RejectPass123!",
+            "organization_name": "Reject Test Care",
+            "license_number": "RT-2024-001",
+            "phone": "+44 20 7946 0961",
+            "address": "999 Reject Street, London, UK",
+            "healthcare_category": "Dog Sitter"
+        }
+        
+        reg_success, reg_response, _ = self.make_request("POST", "/partner/register", partner_data)
+        
+        if not reg_success or "partner_id" not in reg_response:
+            self.log_test(
+                "Admin Partner Rejection",
+                False,
+                "Failed to create partner for rejection test",
+                reg_response
+            )
+            return
+            
+        partner_id = reg_response["partner_id"]
+        
+        success, response, status_code = self.make_request(
+            "PUT", 
+            f"/admin/partners/{partner_id}/status?status=rejected"
+        )
+        
+        self.log_test(
+            "Admin Partner Rejection",
+            success,
+            f"Partner rejection status: {status_code}",
+            response
+        )
+
+    def test_admin_suspend_partner(self):
+        """Test admin suspending a partner"""
+        if not self.created_partners or self.created_partners[0].get("status") != "approved":
+            self.log_test(
+                "Admin Partner Suspension",
+                False,
+                "No approved partner available for suspension test",
+                {}
+            )
+            return
+            
+        partner_id = self.created_partners[0]["id"]
+        
+        success, response, status_code = self.make_request(
+            "PUT", 
+            f"/admin/partners/{partner_id}/status?status=suspended"
+        )
+        
+        self.log_test(
+            "Admin Partner Suspension",
+            success,
+            f"Partner suspension status: {status_code}",
+            response
+        )
+        
+        # Revert to approved for other tests
+        if success:
+            self.make_request(
+                "PUT", 
+                f"/admin/partners/{partner_id}/status?status=approved"
+            )
+
+    def test_admin_invalid_partner_status(self):
+        """Test admin setting invalid partner status"""
+        if not self.created_partners:
+            self.log_test(
+                "Admin Invalid Partner Status",
+                False,
+                "No partner available for invalid status test",
+                {}
+            )
+            return
+            
+        partner_id = self.created_partners[0]["id"]
+        
+        success, response, status_code = self.make_request(
+            "PUT", 
+            f"/admin/partners/{partner_id}/status?status=invalid_status"
+        )
+        
+        expected_failure = not success and status_code == 400
+        self.log_test(
+            "Admin Invalid Partner Status",
+            expected_failure,
+            f"Expected 400 error for invalid status, got {status_code}",
+            response
+        )
+
+    def test_admin_invalid_partner_id(self):
+        """Test admin operations with invalid partner ID"""
+        success, response, status_code = self.make_request(
+            "PUT", 
+            "/admin/partners/invalid_id/status?status=approved"
+        )
+        
+        expected_failure = not success and status_code == 400
+        self.log_test(
+            "Admin Invalid Partner ID",
+            expected_failure,
+            f"Expected 400 error for invalid partner ID, got {status_code}",
+            response
+        )
+
+    def create_test_handler_with_healthcare_skills(self):
+        """Create a test handler with healthcare skills for assignment tests"""
+        handler_data = {
+            "name": "Healthcare Handler",
+            "email": "healthcare.handler@test.com",
+            "password": "HandlerPass123!",
+            "phone": "+44 20 7946 0962",
+            "user_type": "handler",
+            "skills": ["Mental Support Worker", "Baby Sitter"]
+        }
+        
+        success, response, status_code = self.make_request("POST", "/auth/register", handler_data)
+        
+        if success and "id" in response:
+            self.created_handlers.append({
+                "id": response["id"],
+                "email": handler_data["email"],
+                "skills": handler_data["skills"]
+            })
+            return response["id"]
+        return None
+
+    def test_admin_assign_handler_to_partner(self):
+        """Test admin assigning a healthcare handler to a partner"""
+        if not self.created_partners or self.created_partners[0].get("status") != "approved":
+            self.log_test(
+                "Admin Handler Assignment",
+                False,
+                "No approved partner available for handler assignment",
+                {}
+            )
+            return
+            
+        # Create a handler with healthcare skills
+        handler_id = self.create_test_handler_with_healthcare_skills()
+        if not handler_id:
+            self.log_test(
+                "Admin Handler Assignment",
+                False,
+                "Failed to create test handler",
+                {}
+            )
+            return
+            
+        partner_id = self.created_partners[0]["id"]
+        assignment_data = {
+            "partner_id": partner_id,
+            "assignment_notes": "Assigned for mental health support services"
+        }
+        
+        success, response, status_code = self.make_request(
+            "POST", 
+            f"/admin/handlers/{handler_id}/assign-partner",
+            assignment_data
+        )
+        
+        self.log_test(
+            "Admin Handler Assignment",
+            success,
+            f"Handler assignment status: {status_code}",
+            response
+        )
+
+    def test_admin_assign_handler_without_healthcare_skills(self):
+        """Test admin assigning handler without healthcare skills (should fail)"""
+        if not self.created_partners:
+            self.log_test(
+                "Admin Handler Assignment - No Healthcare Skills",
+                False,
+                "No partner available for assignment test",
+                {}
+            )
+            return
+            
+        # Create a handler without healthcare skills
+        handler_data = {
+            "name": "Regular Handler",
+            "email": "regular.handler@test.com",
+            "password": "RegularPass123!",
+            "phone": "+44 20 7946 0963",
+            "user_type": "handler",
+            "skills": ["Plumbing", "Electrical"]  # Non-healthcare skills
+        }
+        
+        reg_success, reg_response, _ = self.make_request("POST", "/auth/register", handler_data)
+        
+        if not reg_success or "id" not in reg_response:
+            self.log_test(
+                "Admin Handler Assignment - No Healthcare Skills",
+                False,
+                "Failed to create regular handler for test",
+                reg_response
+            )
+            return
+            
+        handler_id = reg_response["id"]
+        partner_id = self.created_partners[0]["id"]
+        assignment_data = {
+            "partner_id": partner_id,
+            "assignment_notes": "Attempting to assign non-healthcare handler"
+        }
+        
+        success, response, status_code = self.make_request(
+            "POST", 
+            f"/admin/handlers/{handler_id}/assign-partner",
+            assignment_data
+        )
+        
+        # Should fail because handler doesn't have healthcare skills
+        expected_failure = not success and status_code == 400
+        self.log_test(
+            "Admin Handler Assignment - No Healthcare Skills",
+            expected_failure,
+            f"Expected 400 error for non-healthcare handler, got {status_code}",
+            response
+        )
+
+    # ==================== PRIORITY 3: Partner Data Access ====================
     
-    async def make_request(self, method: str, endpoint: str, data: Dict = None, params: Dict = None) -> tuple:
-        """Make HTTP request and return (success, response_data, status_code)"""
-        url = f"{BACKEND_URL}{endpoint}"
-        try:
-            async with self.session.request(
-                method, 
-                url, 
-                json=data, 
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as response:
-                try:
-                    response_data = await response.json()
-                except:
-                    response_data = await response.text()
-                
-                return response.status < 400, response_data, response.status
-        except Exception as e:
-            return False, str(e), 0
-    
-    # ==================== Authentication Tests ====================
-    
-    async def test_register_customer(self):
-        """Test customer registration"""
-        import time
-        timestamp = int(time.time())
+    def test_partner_login_after_approval(self):
+        """Test successful partner login after approval"""
+        if not self.created_partners or self.created_partners[0].get("status") != "approved":
+            self.log_test(
+                "Partner Login - After Approval",
+                False,
+                "No approved partner available for login test",
+                {}
+            )
+            return
+            
+        partner = self.created_partners[0]
+        login_data = {
+            "email": partner["email"],
+            "password": partner["password"]
+        }
+        
+        success, response, status_code = self.make_request("POST", "/partner/login", login_data)
+        
+        if success and "id" in response:
+            # Store partner details for further tests
+            partner["login_response"] = response
+            
+        self.log_test(
+            "Partner Login - After Approval",
+            success,
+            f"Login status: {status_code}, Partner ID: {response.get('id', 'N/A')}",
+            response
+        )
+
+    def test_get_partner_handlers(self):
+        """Test retrieving handlers assigned to a partner"""
+        if not self.created_partners:
+            self.log_test(
+                "Get Partner Handlers",
+                False,
+                "No partner available for handlers test",
+                {}
+            )
+            return
+            
+        partner_id = self.created_partners[0]["id"]
+        
+        success, response, status_code = self.make_request("GET", f"/partner/{partner_id}/handlers")
+        
+        if success:
+            handler_count = len(response.get("handlers", []))
+            total = response.get("total", 0)
+            
+        self.log_test(
+            "Get Partner Handlers",
+            success,
+            f"Retrieved {handler_count if success else 0} handlers, Total: {total if success else 0}",
+            response
+        )
+
+    def test_get_partner_handlers_invalid_id(self):
+        """Test retrieving handlers with invalid partner ID"""
+        success, response, status_code = self.make_request("GET", "/partner/invalid_id/handlers")
+        
+        expected_failure = not success and status_code == 400
+        self.log_test(
+            "Get Partner Handlers - Invalid ID",
+            expected_failure,
+            f"Expected 400 error for invalid partner ID, got {status_code}",
+            response
+        )
+
+    def create_test_booking_for_healthcare(self):
+        """Create a test booking for healthcare services"""
+        if not self.created_handlers:
+            return None
+            
+        # Create a customer first
         customer_data = {
-            "name": "Sarah Johnson",
-            "email": f"sarah.johnson.{timestamp}@email.com",
-            "password": "SecurePass123!",
-            "phone": "+1-555-0123",
-            "address": "123 Main St, Springfield, IL 62701",
+            "name": "Healthcare Customer",
+            "email": "healthcare.customer@test.com",
+            "password": "CustomerPass123!",
+            "phone": "+44 20 7946 0964",
             "user_type": "customer"
         }
         
-        success, response, status = await self.make_request("POST", "/auth/register", customer_data)
+        cust_success, cust_response, _ = self.make_request("POST", "/auth/register", customer_data)
+        if not cust_success or "id" not in cust_response:
+            return None
+            
+        customer_id = cust_response["id"]
         
-        if success and status == 200:
-            self.test_data["customer"] = response
-            self.log_result("Customer Registration", True, f"Customer ID: {response.get('id')}")
-        else:
-            self.log_result("Customer Registration", False, f"Status: {status}", response)
-    
-    async def test_register_professional(self):
-        """Test professional registration"""
-        import time
-        timestamp = int(time.time())
-        professional_data = {
-            "name": "Mike Rodriguez",
-            "email": f"mike.rodriguez.{timestamp}@email.com",
-            "password": "SecurePass123!",
-            "phone": "+1-555-0456",
-            "skills": ["Plumbing", "Electrical", "HVAC"],
-            "bio": "Experienced home service professional with 10+ years in plumbing and electrical work."
+        # Create a healthcare service
+        service_data = {
+            "category": "Mental Support Worker",
+            "name": "Mental Health Support Session",
+            "description": "Professional mental health support and counseling",
+            "fixed_price": 80.0,
+            "estimated_duration": 60
         }
         
-        success, response, status = await self.make_request("POST", "/auth/register", {
-            **professional_data,
-            "user_type": "professional"
-        })
+        serv_success, serv_response, _ = self.make_request("POST", "/services", service_data)
+        if not serv_success or "id" not in serv_response:
+            return None
+            
+        service_id = serv_response["id"]
         
-        if success and status == 200:
-            self.test_data["professional"] = response
-            self.log_result("Professional Registration", True, f"Professional ID: {response.get('id')}")
-        else:
-            self.log_result("Professional Registration", False, f"Status: {status}", response)
-    
-    async def test_login_success(self):
-        """Test successful login"""
-        if "customer" not in self.test_data:
-            self.log_result("Login Success Test", False, "Customer not registered")
-            return
-        
-        login_data = {
-            "email": self.test_data["customer"]["email"],
-            "password": "SecurePass123!"
-        }
-        
-        success, response, status = await self.make_request("POST", "/auth/login", login_data)
-        
-        if success and status == 200 and "user" in response:
-            self.log_result("Login Success", True, f"User: {response['user']['name']}")
-        else:
-            self.log_result("Login Success", False, f"Status: {status}", response)
-    
-    async def test_login_failure(self):
-        """Test login with wrong credentials"""
-        login_data = {
-            "email": "sarah.johnson@email.com",
-            "password": "WrongPassword"
-        }
-        
-        success, response, status = await self.make_request("POST", "/auth/login", login_data)
-        
-        if not success and status == 401:
-            self.log_result("Login Failure Test", True, "Correctly rejected invalid credentials")
-        else:
-            self.log_result("Login Failure Test", False, f"Should have failed with 401, got {status}", response)
-    
-    # ==================== Services Tests ====================
-    
-    async def test_seed_services(self):
-        """Seed services data"""
-        success, response, status = await self.make_request("POST", "/seed/services")
-        
-        if success and status == 200:
-            self.log_result("Seed Services", True, response.get("message", ""))
-        else:
-            self.log_result("Seed Services", False, f"Status: {status}", response)
-    
-    async def test_get_all_services(self):
-        """Test getting all services"""
-        success, response, status = await self.make_request("GET", "/services")
-        
-        if success and status == 200 and isinstance(response, list):
-            service_count = len(response)
-            self.test_data["services"] = response
-            if service_count >= 30:  # Should have 31 services
-                self.log_result("Get All Services", True, f"Retrieved {service_count} services")
-            else:
-                self.log_result("Get All Services", False, f"Expected ~31 services, got {service_count}")
-        else:
-            self.log_result("Get All Services", False, f"Status: {status}", response)
-    
-    async def test_get_services_by_category(self):
-        """Test filtering services by category"""
-        success, response, status = await self.make_request("GET", "/services", params={"category": "Plumbing"})
-        
-        if success and status == 200 and isinstance(response, list):
-            plumbing_services = [s for s in response if s.get("category") == "Plumbing"]
-            if len(plumbing_services) > 0:
-                self.log_result("Filter Services by Category", True, f"Found {len(plumbing_services)} plumbing services")
-            else:
-                self.log_result("Filter Services by Category", False, "No plumbing services found")
-        else:
-            self.log_result("Filter Services by Category", False, f"Status: {status}", response)
-    
-    async def test_get_categories(self):
-        """Test getting all categories"""
-        success, response, status = await self.make_request("GET", "/categories")
-        
-        if success and status == 200 and "categories" in response:
-            categories = response["categories"]
-            if len(categories) >= 10:  # Should have 10 categories
-                self.log_result("Get Categories", True, f"Retrieved {len(categories)} categories")
-            else:
-                self.log_result("Get Categories", False, f"Expected ~10 categories, got {len(categories)}")
-        else:
-            self.log_result("Get Categories", False, f"Status: {status}", response)
-    
-    async def test_get_specific_service(self):
-        """Test getting specific service details"""
-        if "services" not in self.test_data or not self.test_data["services"]:
-            self.log_result("Get Specific Service", False, "No services available")
-            return
-        
-        service_id = self.test_data["services"][0]["id"]
-        success, response, status = await self.make_request("GET", f"/services/{service_id}")
-        
-        if success and status == 200 and response.get("id") == service_id:
-            self.log_result("Get Specific Service", True, f"Service: {response.get('name')}")
-        else:
-            self.log_result("Get Specific Service", False, f"Status: {status}", response)
-    
-    # ==================== Booking Tests ====================
-    
-    async def test_create_booking(self):
-        """Test creating a booking"""
-        if "customer" not in self.test_data or "services" not in self.test_data:
-            self.log_result("Create Booking", False, "Missing customer or services data")
-            return
-        
-        service = self.test_data["services"][0]  # Use first service
+        # Create booking
         booking_data = {
-            "service_id": service["id"],
-            "customer_id": self.test_data["customer"]["id"],
-            "scheduled_time": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+            "service_id": service_id,
+            "customer_id": customer_id,
+            "scheduled_date": "2024-12-20",
+            "time_range_start": "10:00",
+            "time_range_end": "11:00",
             "location": {
-                "latitude": 39.7817,
-                "longitude": -89.6501
+                "latitude": 51.5074,
+                "longitude": -0.1278
             },
-            "notes": "Please call when you arrive. Gate code is 1234."
+            "notes": "Healthcare support booking for testing",
+            "terms_agreed": True,
+            "service_category": "Mental Support Worker"
         }
         
-        success, response, status = await self.make_request("POST", "/bookings", booking_data)
-        
-        if success and status == 200:
-            self.test_data["booking"] = response
-            self.log_result("Create Booking", True, f"Booking ID: {response.get('id')}")
-        else:
-            self.log_result("Create Booking", False, f"Status: {status}", response)
-    
-    async def test_get_customer_bookings(self):
-        """Test getting customer's bookings"""
-        if "customer" not in self.test_data:
-            self.log_result("Get Customer Bookings", False, "No customer data")
-            return
-        
-        customer_id = self.test_data["customer"]["id"]
-        success, response, status = await self.make_request("GET", f"/bookings/customer/{customer_id}")
-        
-        if success and status == 200 and isinstance(response, list):
-            self.log_result("Get Customer Bookings", True, f"Found {len(response)} bookings")
-        else:
-            self.log_result("Get Customer Bookings", False, f"Status: {status}", response)
-    
-    async def test_get_pending_bookings(self):
-        """Test getting pending bookings"""
-        success, response, status = await self.make_request("GET", "/bookings/pending")
-        
-        if success and status == 200 and isinstance(response, list):
-            self.log_result("Get Pending Bookings", True, f"Found {len(response)} pending bookings")
-        else:
-            self.log_result("Get Pending Bookings", False, f"Status: {status}", response)
-    
-    async def test_accept_booking(self):
-        """Test professional accepting a booking"""
-        if "booking" not in self.test_data or "professional" not in self.test_data:
-            self.log_result("Accept Booking", False, "Missing booking or professional data")
-            return
-        
-        booking_id = self.test_data["booking"]["id"]
-        professional_id = self.test_data["professional"]["id"]
-        
-        update_data = {
-            "status": "accepted",
-            "professional_id": professional_id
-        }
-        
-        success, response, status = await self.make_request("PATCH", f"/bookings/{booking_id}", update_data)
-        
-        if success and status == 200 and response.get("status") == "accepted":
-            self.test_data["booking"] = response  # Update booking data
-            self.log_result("Accept Booking", True, f"Booking accepted by professional")
-        else:
-            self.log_result("Accept Booking", False, f"Status: {status}", response)
-    
-    async def test_start_job(self):
-        """Test starting a job"""
-        if "booking" not in self.test_data:
-            self.log_result("Start Job", False, "No booking data")
-            return
-        
-        booking_id = self.test_data["booking"]["id"]
-        update_data = {
-            "status": "in_progress",
-            "actual_start": datetime.utcnow().isoformat()
-        }
-        
-        success, response, status = await self.make_request("PATCH", f"/bookings/{booking_id}", update_data)
-        
-        if success and status == 200 and response.get("status") == "in_progress":
-            self.test_data["booking"] = response
-            self.log_result("Start Job", True, "Job started successfully")
-        else:
-            self.log_result("Start Job", False, f"Status: {status}", response)
-    
-    async def test_complete_job(self):
-        """Test completing a job"""
-        if "booking" not in self.test_data:
-            self.log_result("Complete Job", False, "No booking data")
-            return
-        
-        booking_id = self.test_data["booking"]["id"]
-        update_data = {
-            "status": "completed",
-            "actual_end": datetime.utcnow().isoformat()
-        }
-        
-        success, response, status = await self.make_request("PATCH", f"/bookings/{booking_id}", update_data)
-        
-        if success and status == 200 and response.get("status") == "completed":
-            self.test_data["booking"] = response
-            self.log_result("Complete Job", True, "Job completed successfully")
-        else:
-            self.log_result("Complete Job", False, f"Status: {status}", response)
-    
-    # ==================== Professional Tests ====================
-    
-    async def test_get_professionals(self):
-        """Test getting all professionals"""
-        success, response, status = await self.make_request("GET", "/professionals")
-        
-        if success and status == 200 and isinstance(response, list):
-            self.log_result("Get Professionals", True, f"Found {len(response)} professionals")
-        else:
-            self.log_result("Get Professionals", False, f"Status: {status}", response)
-    
-    async def test_update_availability(self):
-        """Test updating professional availability"""
-        if "professional" not in self.test_data:
-            self.log_result("Update Availability", False, "No professional data")
-            return
-        
-        professional_id = self.test_data["professional"]["id"]
-        success, response, status = await self.make_request("PATCH", f"/professionals/{professional_id}/availability?available=false")
-        
-        if success and status == 200:
-            self.log_result("Update Availability", True, "Availability updated successfully")
-        else:
-            self.log_result("Update Availability", False, f"Status: {status}", response)
-    
-    async def test_update_location(self):
-        """Test updating professional location"""
-        if "professional" not in self.test_data:
-            self.log_result("Update Location", False, "No professional data")
-            return
-        
-        professional_id = self.test_data["professional"]["id"]
-        location_data = {
-            "professional_id": professional_id,
-            "latitude": 39.7817,
-            "longitude": -89.6501,
-            "accuracy": 10.0
-        }
-        
-        success, response, status = await self.make_request("PATCH", f"/professionals/{professional_id}/location", location_data)
-        
-        if success and status == 200:
-            self.log_result("Update Location", True, "Location updated successfully")
-        else:
-            self.log_result("Update Location", False, f"Status: {status}", response)
-    
-    # ==================== Review Tests ====================
-    
-    async def test_create_review(self):
-        """Test creating a review for completed booking"""
-        if "booking" not in self.test_data or self.test_data["booking"].get("status") != "completed":
-            self.log_result("Create Review", False, "No completed booking available")
-            return
-        
-        review_data = {
-            "booking_id": self.test_data["booking"]["id"],
-            "customer_id": self.test_data["customer"]["id"],
-            "professional_id": self.test_data["professional"]["id"],
-            "rating": 5,
-            "comment": "Excellent service! Mike was professional, punctual, and did great work. Highly recommended!"
-        }
-        
-        success, response, status = await self.make_request("POST", "/reviews", review_data)
-        
-        if success and status == 200:
-            self.test_data["review"] = response
-            self.log_result("Create Review", True, f"Review created with rating: {response.get('rating')}")
-        else:
-            self.log_result("Create Review", False, f"Status: {status}", response)
-    
-    async def test_get_professional_reviews(self):
-        """Test getting professional reviews"""
-        if "professional" not in self.test_data:
-            self.log_result("Get Professional Reviews", False, "No professional data")
-            return
-        
-        professional_id = self.test_data["professional"]["id"]
-        success, response, status = await self.make_request("GET", f"/reviews/professional/{professional_id}")
-        
-        if success and status == 200 and isinstance(response, list):
-            self.log_result("Get Professional Reviews", True, f"Found {len(response)} reviews")
-        else:
-            self.log_result("Get Professional Reviews", False, f"Status: {status}", response)
-    
-    # ==================== AI Recommendations Tests ====================
-    
-    async def test_ai_recommendations(self):
-        """Test AI recommendations"""
-        if "customer" not in self.test_data:
-            self.log_result("AI Recommendations", False, "No customer data")
-            return
-        
-        customer_id = self.test_data["customer"]["id"]
-        success, response, status = await self.make_request("GET", f"/recommendations/{customer_id}")
-        
-        if success and status == 200 and "recommendations" in response:
-            recommendations = response["recommendations"]
-            self.log_result("AI Recommendations", True, f"Got {len(recommendations)} recommendations")
-        else:
-            self.log_result("AI Recommendations", False, f"Status: {status}", response)
-    
-    # ==================== Payment Tests ====================
-    
-    async def test_create_checkout_session(self):
-        """Test creating Stripe checkout session"""
-        if "booking" not in self.test_data:
-            self.log_result("Create Checkout Session", False, "No booking data")
-            return
-        
-        payment_data = {
-            "booking_id": self.test_data["booking"]["id"],
-            "origin_url": "https://ondemand-care.preview.emergentagent.com"
-        }
-        
-        success, response, status = await self.make_request("POST", "/checkout/session", payment_data)
-        
-        if success and status == 200 and "url" in response:
-            self.log_result("Create Checkout Session", True, "Checkout session created successfully")
-        else:
-            self.log_result("Create Checkout Session", False, f"Status: {status}", response)
-    
-    # ==================== Edge Case Tests ====================
-    
-    async def test_invalid_service_id(self):
-        """Test getting service with invalid ID"""
-        success, response, status = await self.make_request("GET", "/services/invalid_id")
-        
-        if not success and status == 400:
-            self.log_result("Invalid Service ID Test", True, "Correctly rejected invalid ID")
-        else:
-            self.log_result("Invalid Service ID Test", False, f"Should have failed with 400, got {status}")
-    
-    async def test_duplicate_email_registration(self):
-        """Test registering with duplicate email"""
-        if "customer" not in self.test_data:
-            self.log_result("Duplicate Email Test", False, "No customer data for duplicate test")
-            return
-            
-        duplicate_data = {
-            "name": "Another User",
-            "email": self.test_data["customer"]["email"],  # Same email as first customer
-            "password": "AnotherPass123!",
-            "phone": "+1-555-9999",
-            "user_type": "customer"
-        }
-        
-        success, response, status = await self.make_request("POST", "/auth/register", duplicate_data)
-        
-        if not success and status == 400:
-            self.log_result("Duplicate Email Test", True, "Correctly rejected duplicate email")
-        else:
-            self.log_result("Duplicate Email Test", False, f"Should have failed with 400, got {status}")
-    
-    # ==================== Admin API Tests ====================
-    
-    async def setup_admin_user(self):
-        """Setup admin user for testing"""
-        try:
-            # Try to login with existing admin
-            success, response, status = await self.make_request("POST", "/auth/login", ADMIN_CREDENTIALS)
-            
-            if success and status == 200:
-                self.test_data["admin"] = response["user"]
-                self.log_result("Admin Login", True, "Successfully logged in as admin")
-                return True
-            elif status == 401:
-                # Admin doesn't exist, create one
-                admin_data = {
-                    "name": "Admin User",
-                    "email": ADMIN_CREDENTIALS["email"],
-                    "password": ADMIN_CREDENTIALS["password"],
-                    "phone": "+1234567890",
-                    "address": "Admin Office",
-                    "user_type": "admin"
-                }
-                
-                reg_success, reg_response, reg_status = await self.make_request("POST", "/auth/register", admin_data)
-                if reg_success and reg_status == 200:
-                    # Now login
-                    login_success, login_response, login_status = await self.make_request("POST", "/auth/login", ADMIN_CREDENTIALS)
-                    if login_success and login_status == 200:
-                        self.test_data["admin"] = login_response["user"]
-                        self.log_result("Admin Setup", True, "Created and logged in as admin")
-                        return True
-                    else:
-                        self.log_result("Admin Setup", False, f"Failed to login after registration: {login_status}", login_response)
-                        return False
-                elif reg_status == 400 and "already registered" in str(reg_response):
-                    # Admin already exists, try login again
-                    login_success, login_response, login_status = await self.make_request("POST", "/auth/login", ADMIN_CREDENTIALS)
-                    if login_success and login_status == 200:
-                        self.test_data["admin"] = login_response["user"]
-                        self.log_result("Admin Setup", True, "Admin already exists, logged in successfully")
-                        return True
-                    else:
-                        self.log_result("Admin Setup", False, f"Admin exists but login failed: {login_status}", login_response)
-                        return False
-                else:
-                    self.log_result("Admin Setup", False, f"Failed to register admin: {reg_status}", reg_response)
-                    return False
-            else:
-                self.log_result("Admin Login", False, f"Login failed with status {status}", response)
-                return False
-                
-        except Exception as e:
-            self.log_result("Admin Setup", False, f"Exception during admin setup: {str(e)}")
-            return False
-    
-    async def test_banner_management(self):
-        """Test banner management APIs"""
-        # Test 1: Create first banner
-        banner1_data = {
-            "title": "Summer Special Offer",
-            "subtitle": "Get 20% off on all cleaning services",
-            "button_text": "Book Now",
-            "active": True
-        }
-        
-        success, response, status = await self.make_request("POST", "/admin/banner", banner1_data)
-        if success and status == 200:
-            banner1 = response
-            self.test_data["banner1_id"] = banner1["banner"]["id"]
-            self.log_result("Create Banner 1", True, "Successfully created first banner")
-        else:
-            self.log_result("Create Banner 1", False, f"Failed to create banner: {status}", response)
-            return
-        
-        # Test 2: Create second banner (should deactivate first)
-        banner2_data = {
-            "title": "Winter Maintenance",
-            "subtitle": "Prepare your home for winter",
-            "button_text": "Schedule Service",
-            "active": True
-        }
-        
-        success, response, status = await self.make_request("POST", "/admin/banner", banner2_data)
-        if success and status == 200:
-            banner2 = response
-            self.test_data["banner2_id"] = banner2["banner"]["id"]
-            self.log_result("Create Banner 2", True, "Successfully created second banner")
-        else:
-            self.log_result("Create Banner 2", False, f"Failed to create second banner: {status}", response)
-            return
-        
-        # Test 3: Get active banner (should be banner2)
-        success, response, status = await self.make_request("GET", "/admin/banner/active")
-        if success and status == 200:
-            active_banner = response
-            if active_banner["banner"] and active_banner["banner"]["title"] == "Winter Maintenance":
-                self.log_result("Get Active Banner", True, "Correctly retrieved active banner")
-            else:
-                self.log_result("Get Active Banner", False, "Wrong active banner returned", active_banner)
-        else:
-            self.log_result("Get Active Banner", False, f"Failed to get active banner: {status}", response)
-        
-        # Test 4: Get all banners
-        success, response, status = await self.make_request("GET", "/admin/banners")
-        if success and status == 200:
-            all_banners = response
-            if len(all_banners["banners"]) >= 2:
-                self.log_result("Get All Banners", True, f"Retrieved {len(all_banners['banners'])} banners")
-            else:
-                self.log_result("Get All Banners", False, "Expected at least 2 banners", all_banners)
-        else:
-            self.log_result("Get All Banners", False, f"Failed to get banners: {status}", response)
-        
-        # Test 5: Activate first banner
-        if "banner1_id" in self.test_data:
-            banner1_id = self.test_data["banner1_id"]
-            success, response, status = await self.make_request("PUT", f"/admin/banner/{banner1_id}/activate")
-            if success and status == 200:
-                self.log_result("Activate Banner 1", True, "Successfully activated first banner")
-                
-                # Verify it's now active
-                active_success, active_response, active_status = await self.make_request("GET", "/admin/banner/active")
-                if active_success and active_status == 200:
-                    active_banner = active_response
-                    if active_banner["banner"] and active_banner["banner"]["title"] == "Summer Special Offer":
-                        self.log_result("Verify Banner Switch", True, "Banner activation switch verified")
-                    else:
-                        self.log_result("Verify Banner Switch", False, "Banner switch verification failed", active_banner)
-            else:
-                self.log_result("Activate Banner 1", False, f"Failed to activate banner: {status}", response)
-        
-        # Test 6: Delete second banner
-        if "banner2_id" in self.test_data:
-            banner2_id = self.test_data["banner2_id"]
-            success, response, status = await self.make_request("DELETE", f"/admin/banner/{banner2_id}")
-            if success and status == 200:
-                self.log_result("Delete Banner 2", True, "Successfully deleted second banner")
-                
-                # Verify it's deleted
-                all_success, all_response, all_status = await self.make_request("GET", "/admin/banners")
-                if all_success and all_status == 200:
-                    remaining_banners = all_response
-                    banner2_exists = any(b["id"] == banner2_id for b in remaining_banners["banners"])
-                    if not banner2_exists:
-                        self.log_result("Verify Banner Deletion", True, "Banner deletion verified")
-                    else:
-                        self.log_result("Verify Banner Deletion", False, "Banner still exists after deletion")
-            else:
-                self.log_result("Delete Banner 2", False, f"Failed to delete banner: {status}", response)
-    
-    async def test_featured_categories(self):
-        """Test featured categories APIs"""
-        # Test 1: Set featured categories
-        featured_categories = [
-            {"category": "Cleaning", "priority": 1, "active": True},
-            {"category": "Plumbing", "priority": 2, "active": True},
-            {"category": "Electrical", "priority": 3, "active": True},
-            {"category": "HVAC", "priority": 4, "active": True}
-        ]
-        
-        success, response, status = await self.make_request("POST", "/admin/featured-categories", featured_categories)
-        if success and status == 200:
-            result = response
-            self.log_result("Set Featured Categories", True, f"Successfully set {len(featured_categories)} featured categories")
-        else:
-            self.log_result("Set Featured Categories", False, f"Failed to set categories: {status}", response)
-            return
-        
-        # Test 2: Get featured categories
-        success, response, status = await self.make_request("GET", "/admin/featured-categories")
-        if success and status == 200:
-            categories = response
-            if len(categories["categories"]) == 4:
-                # Check if they're sorted by priority
-                priorities = [cat["priority"] for cat in categories["categories"]]
-                if priorities == sorted(priorities, reverse=True):
-                    self.log_result("Get Featured Categories", True, "Successfully retrieved and sorted categories")
-                else:
-                    self.log_result("Get Featured Categories", False, "Categories not properly sorted by priority", categories)
-            else:
-                self.log_result("Get Featured Categories", False, f"Expected 4 categories, got {len(categories['categories'])}", categories)
-        else:
-            self.log_result("Get Featured Categories", False, f"Failed to get categories: {status}", response)
-        
-        # Test 3: Update featured categories (different set)
-        updated_categories = [
-            {"category": "Handyman", "priority": 1, "active": True},
-            {"category": "Painting", "priority": 2, "active": True}
-        ]
-        
-        success, response, status = await self.make_request("POST", "/admin/featured-categories", updated_categories)
-        if success and status == 200:
-            self.log_result("Update Featured Categories", True, "Successfully updated featured categories")
-            
-            # Verify update
-            get_success, get_response, get_status = await self.make_request("GET", "/admin/featured-categories")
-            if get_success and get_status == 200:
-                categories = get_response
-                if len(categories["categories"]) == 2:
-                    self.log_result("Verify Category Update", True, "Category update verified")
-                else:
-                    self.log_result("Verify Category Update", False, f"Expected 2 categories after update, got {len(categories['categories'])}")
-        else:
-            self.log_result("Update Featured Categories", False, f"Failed to update categories: {status}", response)
-    
-    async def test_category_icons(self):
-        """Test category icons APIs"""
-        # Test 1: Update category icons
-        category_icons = [
-            {"category": "Cleaning", "icon": "🧹", "color": "#4CAF50"},
-            {"category": "Plumbing", "icon": "🔧", "color": "#2196F3"},
-            {"category": "Electrical", "icon": "⚡", "color": "#FF9800"},
-            {"category": "HVAC", "icon": "❄️", "color": "#9C27B0"},
-            {"category": "Handyman", "icon": "🔨", "color": "#795548"}
-        ]
-        
-        success, response, status = await self.make_request("POST", "/admin/category-icons", category_icons)
-        if success and status == 200:
-            result = response
-            self.log_result("Update Category Icons", True, f"Successfully updated {len(category_icons)} category icons")
-        else:
-            self.log_result("Update Category Icons", False, f"Failed to update icons: {status}", response)
-            return
-        
-        # Test 2: Get category icons
-        success, response, status = await self.make_request("GET", "/admin/category-icons")
-        if success and status == 200:
-            icons = response
-            if len(icons["icons"]) >= 5:
-                # Verify specific icons exist
-                cleaning_icon = next((icon for icon in icons["icons"] if icon["category"] == "Cleaning"), None)
-                if cleaning_icon and cleaning_icon["icon"] == "🧹":
-                    self.log_result("Get Category Icons", True, f"Successfully retrieved {len(icons['icons'])} category icons")
-                else:
-                    self.log_result("Get Category Icons", False, "Category icons data mismatch", icons)
-            else:
-                self.log_result("Get Category Icons", False, f"Expected at least 5 icons, got {len(icons['icons'])}", icons)
-        else:
-            self.log_result("Get Category Icons", False, f"Failed to get icons: {status}", response)
-        
-        # Test 3: Update specific category icon (upsert test)
-        updated_icon = [{"category": "Cleaning", "icon": "🧽", "color": "#8BC34A"}]
-        
-        success, response, status = await self.make_request("POST", "/admin/category-icons", updated_icon)
-        if success and status == 200:
-            self.log_result("Update Specific Icon", True, "Successfully updated specific category icon")
-            
-            # Verify update
-            get_success, get_response, get_status = await self.make_request("GET", "/admin/category-icons")
-            if get_success and get_status == 200:
-                icons = get_response
-                cleaning_icon = next((icon for icon in icons["icons"] if icon["category"] == "Cleaning"), None)
-                if cleaning_icon and cleaning_icon["icon"] == "🧽":
-                    self.log_result("Verify Icon Update", True, "Icon update verified")
-                else:
-                    self.log_result("Verify Icon Update", False, "Icon update verification failed", cleaning_icon)
-        else:
-            self.log_result("Update Specific Icon", False, f"Failed to update icon: {status}", response)
-    
-    async def test_admin_stats(self):
-        """Test admin stats API"""
-        success, response, status = await self.make_request("GET", "/admin/stats")
-        if success and status == 200:
-            stats = response["stats"]
-            
-            # Verify all expected fields are present
-            expected_fields = [
-                "total_users", "total_customers", "total_professionals",
-                "total_services", "total_bookings", "pending_bookings",
-                "completed_bookings", "total_revenue"
-            ]
-            
-            missing_fields = [field for field in expected_fields if field not in stats]
-            if not missing_fields:
-                # Verify data types and reasonable values
-                all_valid = True
-                for field in expected_fields:
-                    if not isinstance(stats[field], (int, float)) or stats[field] < 0:
-                        all_valid = False
-                        break
-                
-                if all_valid:
-                    self.log_result("Get Admin Stats", True, f"Successfully retrieved valid admin stats: {stats}")
-                    
-                    # Additional validation
-                    if stats["total_users"] >= stats["total_customers"] + stats["total_professionals"]:
-                        self.log_result("Stats Validation", True, "User count validation passed")
-                    else:
-                        self.log_result("Stats Validation", False, "User count validation failed - total users should be >= customers + professionals")
-                    
-                    if stats["total_bookings"] >= stats["pending_bookings"] + stats["completed_bookings"]:
-                        self.log_result("Booking Stats Validation", True, "Booking count validation passed")
-                    else:
-                        self.log_result("Booking Stats Validation", False, "Booking count validation failed")
-                else:
-                    self.log_result("Get Admin Stats", False, "Invalid data types or negative values in stats", stats)
-            else:
-                self.log_result("Get Admin Stats", False, f"Missing required fields: {missing_fields}", stats)
-        else:
-            self.log_result("Get Admin Stats", False, f"Failed to get stats: {status}", response)
-    
-    async def test_admin_error_handling(self):
-        """Test error handling for admin APIs"""
-        # Test invalid banner ID
-        success, response, status = await self.make_request("PUT", "/admin/banner/invalid_id/activate")
-        if status == 400:
-            self.log_result("Invalid Banner ID", True, "Correctly handled invalid banner ID")
-        else:
-            self.log_result("Invalid Banner ID", False, f"Expected 400, got {status}")
-        
-        # Test delete non-existent banner
-        success, response, status = await self.make_request("DELETE", "/admin/banner/507f1f77bcf86cd799439011")
-        if status == 404:
-            self.log_result("Delete Non-existent Banner", True, "Correctly handled non-existent banner deletion")
-        else:
-            self.log_result("Delete Non-existent Banner", False, f"Expected 404, got {status}")
+        book_success, book_response, _ = self.make_request("POST", "/bookings", booking_data)
+        if book_success and "id" in book_response:
+            self.created_bookings.append(book_response["id"])
+            return book_response["id"]
+        return None
 
-    # ==================== NEW Service Management Tests ====================
-    
-    async def test_admin_service_management(self):
-        """Test new admin service management APIs - Priority 1 from review request"""
-        print("\n🔧 NEW SERVICE MANAGEMENT APIs - Priority 1")
-        print("-" * 50)
-        
-        # Test 1: GET /api/admin/services - List all services
-        success, response, status = await self.make_request("GET", "/admin/services")
-        
-        if success and status == 200 and "services" in response:
-            services = response["services"]
-            total_count = response.get("total", len(services))
-            
-            # Check if we have 57+ services (was 31, added 26)
-            if total_count >= 57:
-                self.log_result("Admin Get All Services (57+ count)", True, f"Found {total_count} services (expected 57+)")
-                self.test_data["admin_services"] = services
-            else:
-                self.log_result("Admin Get All Services (57+ count)", False, f"Expected 57+ services, got {total_count}")
-                self.test_data["admin_services"] = services  # Still store for other tests
-        else:
-            self.log_result("Admin Get All Services", False, f"Status: {status}", response)
+    def test_get_partner_bookings(self):
+        """Test retrieving bookings for a partner's handlers"""
+        if not self.created_partners:
+            self.log_test(
+                "Get Partner Bookings",
+                False,
+                "No partner available for bookings test",
+                {}
+            )
             return
-        
-        # Test 2: Verify Hair Styling category has 10+ services
-        hair_styling_services = [s for s in services if s.get("category") == "Hair Styling"]
-        if len(hair_styling_services) >= 10:
-            self.log_result("Hair Styling Category (10+ services)", True, f"Found {len(hair_styling_services)} Hair Styling services")
-        else:
-            self.log_result("Hair Styling Category (10+ services)", False, f"Expected 10+ Hair Styling services, found {len(hair_styling_services)}")
-        
-        # Test 3: Verify Therapy category has 10+ services
-        therapy_services = [s for s in services if s.get("category") == "Therapy"]
-        if len(therapy_services) >= 10:
-            self.log_result("Therapy Category (10+ services)", True, f"Found {len(therapy_services)} Therapy services")
-        else:
-            self.log_result("Therapy Category (10+ services)", False, f"Expected 10+ Therapy services, found {len(therapy_services)}")
-        
-        # Test 4: Check new services have 150-word descriptions
-        services_with_long_desc = 0
-        services_with_image_url = 0
-        
-        for service in services:
-            description = service.get("description", "")
-            word_count = len(description.split()) if description else 0
             
-            if word_count >= 100:  # Allow some flexibility
-                services_with_long_desc += 1
+        # Create a test booking
+        booking_id = self.create_test_booking_for_healthcare()
+        
+        partner_id = self.created_partners[0]["id"]
+        
+        success, response, status_code = self.make_request("GET", f"/partner/{partner_id}/bookings")
+        
+        if success:
+            booking_count = len(response.get("bookings", []))
+            total = response.get("total", 0)
             
-            if "image_url" in service and service["image_url"]:
-                services_with_image_url += 1
-        
-        self.log_result("Services with Substantial Descriptions", True, f"Found {services_with_long_desc} services with 100+ word descriptions")
-        self.log_result("Services with Image URLs", True, f"Found {services_with_image_url} services with image_url fields")
-        
-        # Test 5: GET /api/admin/services/{id} - Get single service
-        if services:
-            test_service = services[0]
-            service_id = test_service["id"]
-            
-            success, response, status = await self.make_request("GET", f"/admin/services/{service_id}")
-            
-            if success and status == 200 and response.get("id") == service_id:
-                self.log_result("Admin Get Single Service", True, f"Retrieved service: {response.get('name')}")
-                self.test_data["test_service"] = response
-            else:
-                self.log_result("Admin Get Single Service", False, f"Status: {status}", response)
-        
-        # Test 6: POST /api/admin/services - Create new service
-        new_service_data = {
-            "category": "Testing",
-            "name": "Test Service for Admin API",
-            "description": "This is a comprehensive test service created specifically to verify the new admin service creation API endpoint functionality. It includes a detailed description with multiple sentences to test the description field handling properly. The service is designed exclusively for testing purposes and should be deleted after the testing process is complete. This description contains well over 150 words to meet the stringent requirements for new service descriptions as specified in the testing criteria and review request documentation.",
-            "fixed_price": 199.99,
-            "estimated_duration": 90,
-            "image_url": "https://example.com/test-admin-service.jpg"
-        }
-        
-        success, response, status = await self.make_request("POST", "/admin/services", new_service_data)
-        
-        if success and status == 200 and "service" in response:
-            created_service = response["service"]
-            self.test_data["created_service_id"] = created_service["id"]
-            self.log_result("Admin Create Service", True, f"Created service: {created_service['name']}")
-        else:
-            self.log_result("Admin Create Service", False, f"Status: {status}", response)
-            return
-        
-        # Test 7: PUT /api/admin/services/{id} - Update service
-        if "created_service_id" in self.test_data:
-            service_id = self.test_data["created_service_id"]
-            update_data = {
-                "description": "Updated comprehensive test service description with enhanced details about the service functionality, features, and capabilities. This updated description demonstrates the ability to modify service information through the admin API effectively. The description has been significantly enhanced to provide more detailed information about the service capabilities, testing procedures, and administrative functionality.",
-                "fixed_price": 249.99,
-                "image_url": "https://example.com/updated-admin-service.jpg"
-            }
-            
-            success, response, status = await self.make_request("PUT", f"/admin/services/{service_id}", update_data)
-            
-            if success and status == 200 and "service" in response:
-                updated_service = response["service"]
-                price_updated = updated_service.get("fixed_price") == 249.99
-                desc_updated = "Updated comprehensive" in updated_service.get("description", "")
-                image_updated = updated_service.get("image_url") == "https://example.com/updated-admin-service.jpg"
-                
-                if price_updated and desc_updated and image_updated:
-                    self.log_result("Admin Update Service", True, "Successfully updated service description, price, and image_url")
-                else:
-                    self.log_result("Admin Update Service", False, f"Update incomplete - Price: {price_updated}, Desc: {desc_updated}, Image: {image_updated}")
-            else:
-                self.log_result("Admin Update Service", False, f"Status: {status}", response)
-        
-        # Test 8: DELETE /api/admin/services/{id} - Test booking protection
-        if "created_service_id" in self.test_data:
-            service_id = self.test_data["created_service_id"]
-            
-            # First try to create a booking for this service (to test protection)
-            if "customer" in self.test_data:
-                booking_data = {
-                    "service_id": service_id,
-                    "customer_id": self.test_data["customer"]["id"],
-                    "scheduled_time": (datetime.utcnow() + timedelta(days=1)).isoformat(),
-                    "location": {"latitude": 40.7128, "longitude": -74.0060},
-                    "notes": "Test booking for deletion protection"
-                }
-                
-                booking_success, booking_response, booking_status = await self.make_request("POST", "/bookings", booking_data)
-                
-                if booking_success and booking_status == 200:
-                    # Now try to delete the service (should fail due to active booking)
-                    success, response, status = await self.make_request("DELETE", f"/admin/services/{service_id}")
-                    
-                    if status == 400 and "active bookings" in response.get("detail", "").lower():
-                        self.log_result("Delete Service with Bookings (Protection)", True, "Correctly prevented deletion of service with active bookings")
-                    else:
-                        self.log_result("Delete Service with Bookings (Protection)", False, f"Expected 400 with booking protection, got {status}")
-                else:
-                    # No booking created, just test normal deletion
-                    success, response, status = await self.make_request("DELETE", f"/admin/services/{service_id}")
-                    
-                    if success and status == 200:
-                        self.log_result("Delete Service (No Bookings)", True, "Successfully deleted service with no active bookings")
-                    else:
-                        self.log_result("Delete Service (No Bookings)", False, f"Status: {status}", response)
-            else:
-                # No customer available, just test deletion
-                success, response, status = await self.make_request("DELETE", f"/admin/services/{service_id}")
-                
-                if success and status == 200:
-                    self.log_result("Delete Service", True, "Successfully deleted test service")
-                else:
-                    self.log_result("Delete Service", False, f"Status: {status}", response)
-    
-    async def test_existing_apis_with_new_services(self):
-        """Test existing service APIs work with 57+ services - Priority 3"""
-        print("\n✅ EXISTING FUNCTIONALITY with 57+ Services - Priority 3")
-        print("-" * 50)
-        
-        # Test GET /api/services - Should return all 57+ services
-        success, response, status = await self.make_request("GET", "/services")
-        
-        if success and status == 200 and isinstance(response, list):
-            service_count = len(response)
-            if service_count >= 57:
-                self.log_result("Public API - All Services (57+)", True, f"Retrieved {service_count} services via public API")
-            else:
-                self.log_result("Public API - All Services (57+)", False, f"Expected 57+ services, got {service_count}")
-        else:
-            self.log_result("Public API - All Services", False, f"Status: {status}", response)
-        
-        # Test GET /api/services?category=Hair Styling - Should return 10+ services
-        success, response, status = await self.make_request("GET", "/services", params={"category": "Hair Styling"})
-        
-        if success and status == 200 and isinstance(response, list):
-            hair_count = len(response)
-            if hair_count >= 10:
-                self.log_result("Public API - Hair Styling Filter (10+)", True, f"Found {hair_count} Hair Styling services")
-            else:
-                self.log_result("Public API - Hair Styling Filter (10+)", False, f"Expected 10+ Hair Styling services, got {hair_count}")
-        else:
-            self.log_result("Public API - Hair Styling Filter", False, f"Status: {status}", response)
-        
-        # Test GET /api/services?category=Therapy - Should return 10+ services
-        success, response, status = await self.make_request("GET", "/services", params={"category": "Therapy"})
-        
-        if success and status == 200 and isinstance(response, list):
-            therapy_count = len(response)
-            if therapy_count >= 10:
-                self.log_result("Public API - Therapy Filter (10+)", True, f"Found {therapy_count} Therapy services")
-            else:
-                self.log_result("Public API - Therapy Filter (10+)", False, f"Expected 10+ Therapy services, got {therapy_count}")
-        else:
-            self.log_result("Public API - Therapy Filter", False, f"Status: {status}", response)
-        
-        # Test GET /api/categories - Should include 12+ categories now
-        success, response, status = await self.make_request("GET", "/categories")
-        
-        if success and status == 200 and "categories" in response:
-            categories = response["categories"]
-            category_count = len(categories)
-            
-            if category_count >= 12:
-                self.log_result("Public API - Categories (12+)", True, f"Found {category_count} categories (expected 12+)")
-            else:
-                self.log_result("Public API - Categories (12+)", False, f"Expected 12+ categories, got {category_count}")
-            
-            # Check for new categories
-            has_hair_styling = "Hair Styling" in categories
-            has_therapy = "Therapy" in categories
-            
-            if has_hair_styling and has_therapy:
-                self.log_result("New Categories Present", True, "Hair Styling and Therapy categories found")
-            else:
-                self.log_result("New Categories Present", False, f"Hair Styling: {has_hair_styling}, Therapy: {has_therapy}")
-        else:
-            self.log_result("Public API - Categories", False, f"Status: {status}", response)
+        self.log_test(
+            "Get Partner Bookings",
+            success,
+            f"Retrieved {booking_count if success else 0} bookings, Total: {total if success else 0}",
+            response
+        )
 
-    # ==================== Main Test Runner ====================
+    def test_get_partner_bookings_invalid_id(self):
+        """Test retrieving bookings with invalid partner ID"""
+        success, response, status_code = self.make_request("GET", "/partner/invalid_id/bookings")
+        
+        expected_failure = not success and status_code == 400
+        self.log_test(
+            "Get Partner Bookings - Invalid ID",
+            expected_failure,
+            f"Expected 400 error for invalid partner ID, got {status_code}",
+            response
+        )
+
+    # ==================== Test Execution ====================
     
-    async def run_all_tests(self):
-        """Run all tests in sequence"""
-        print("🚀 Starting Oscar Home Services Backend API Tests")
-        print(f"🔗 Testing against: {BACKEND_URL}")
-        print("=" * 60)
+    def run_all_tests(self):
+        """Run all Partner System API tests"""
+        print("🏥 STARTING COMPREHENSIVE PARTNER SYSTEM API TESTING")
+        print("=" * 80)
+        print()
         
-        # Setup admin user first
-        admin_setup_success = await self.setup_admin_user()
-        if not admin_setup_success:
-            print("❌ Failed to setup admin user. Skipping admin tests.")
+        print("📋 PRIORITY 1: Partner Registration & Authentication")
+        print("-" * 50)
+        self.test_partner_registration_success()
+        self.test_partner_registration_invalid_category()
+        self.test_partner_registration_duplicate_email()
+        self.test_partner_login_pending_status()
+        self.test_partner_login_invalid_credentials()
+        self.test_partner_login_nonexistent_email()
         
-        # Test sequence following the booking workflow
-        test_sequence = [
-            # Authentication
-            ("Authentication", [
-                self.test_register_customer,
-                self.test_register_professional,
-                self.test_login_success,
-                self.test_login_failure,
-                self.test_duplicate_email_registration,
-            ]),
-            
-            # Services
-            ("Services", [
-                self.test_seed_services,
-                self.test_get_all_services,
-                self.test_get_services_by_category,
-                self.test_get_categories,
-                self.test_get_specific_service,
-                self.test_invalid_service_id,
-            ]),
-            
-            # Booking Workflow
-            ("Booking Workflow", [
-                self.test_create_booking,
-                self.test_get_customer_bookings,
-                self.test_get_pending_bookings,
-                self.test_accept_booking,
-                self.test_start_job,
-                self.test_complete_job,
-            ]),
-            
-            # Professionals
-            ("Professional Management", [
-                self.test_get_professionals,
-                self.test_update_availability,
-                self.test_update_location,
-            ]),
-            
-            # Reviews
-            ("Review System", [
-                self.test_create_review,
-                self.test_get_professional_reviews,
-            ]),
-            
-            # AI & Payments
-            ("AI & Payments", [
-                self.test_ai_recommendations,
-                self.test_create_checkout_session,
-            ]),
-        ]
+        print("👨‍💼 PRIORITY 2: Admin Partner Management")
+        print("-" * 50)
+        self.test_admin_approve_partner()
+        self.test_admin_reject_partner()
+        self.test_admin_suspend_partner()
+        self.test_admin_invalid_partner_status()
+        self.test_admin_invalid_partner_id()
+        self.test_admin_assign_handler_to_partner()
+        self.test_admin_assign_handler_without_healthcare_skills()
         
-        # Add admin tests if admin setup was successful
-        if admin_setup_success:
-            test_sequence.append(
-                ("Admin APIs", [
-                    self.test_banner_management,
-                    self.test_featured_categories,
-                    self.test_category_icons,
-                    self.test_admin_stats,
-                    self.test_admin_error_handling,
-                ])
-            )
-            
-            # NEW: Add service management tests
-            test_sequence.append(
-                ("NEW Service Management APIs", [
-                    self.test_admin_service_management,
-                    self.test_existing_apis_with_new_services,
-                ])
-            )
+        print("📊 PRIORITY 3: Partner Data Access")
+        print("-" * 50)
+        self.test_partner_login_after_approval()
+        self.test_get_partner_handlers()
+        self.test_get_partner_handlers_invalid_id()
+        self.test_get_partner_bookings()
+        self.test_get_partner_bookings_invalid_id()
         
-        for category, tests in test_sequence:
-            print(f"\n📋 {category} Tests:")
+        self.print_summary()
+
+    def print_summary(self):
+        """Print test summary"""
+        print("=" * 80)
+        print("🏥 PARTNER SYSTEM API TESTING SUMMARY")
+        print("=" * 80)
+        
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results if result["success"])
+        failed_tests = total_tests - passed_tests
+        success_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+        
+        print(f"📊 Total Tests: {total_tests}")
+        print(f"✅ Passed: {passed_tests}")
+        print(f"❌ Failed: {failed_tests}")
+        print(f"📈 Success Rate: {success_rate:.1f}%")
+        print()
+        
+        if failed_tests > 0:
+            print("❌ FAILED TESTS:")
             print("-" * 40)
-            
-            for test in tests:
-                try:
-                    await test()
-                except Exception as e:
-                    self.log_result(test.__name__, False, f"Exception: {str(e)}")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"• {result['test']}")
+                    if result["details"]:
+                        print(f"  └─ {result['details']}")
+            print()
         
-        # Print summary
-        print("\n" + "=" * 60)
-        print("📊 TEST SUMMARY")
-        print("=" * 60)
-        print(f"✅ Passed: {self.results['passed']}")
-        print(f"❌ Failed: {self.results['failed']}")
-        print(f"📈 Success Rate: {(self.results['passed'] / (self.results['passed'] + self.results['failed']) * 100):.1f}%")
+        print("📋 TEST DATA CREATED:")
+        print(f"• Partners: {len(self.created_partners)}")
+        print(f"• Handlers: {len(self.created_handlers)}")
+        print(f"• Bookings: {len(self.created_bookings)}")
+        print()
         
-        if self.results['errors']:
-            print(f"\n🚨 FAILED TESTS:")
-            for error in self.results['errors']:
-                print(f"   • {error}")
+        if self.created_partners:
+            print("🏥 PARTNER DETAILS:")
+            for i, partner in enumerate(self.created_partners, 1):
+                print(f"Partner {i}:")
+                print(f"  • ID: {partner['id']}")
+                print(f"  • Email: {partner['email']}")
+                print(f"  • Category: {partner['category']}")
+                print(f"  • Status: {partner.get('status', 'pending')}")
         
-        return self.results['failed'] == 0
-
-async def main():
-    """Main test runner"""
-    async with APITester() as tester:
-        success = await tester.run_all_tests()
-        return 0 if success else 1
+        print("=" * 80)
 
 if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)
+    tester = PartnerAPITester()
+    tester.run_all_tests()
