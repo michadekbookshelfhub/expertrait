@@ -784,6 +784,261 @@ async def get_handler_reviews(handler_id: str):
     reviews = await db.reviews.find({"handler_id": handler_id}).sort("created_at", -1).to_list(1000)
     return [ReviewResponse(**serialize_doc(r)) for r in reviews]
 
+# ==================== Handler Operations Routes ====================
+
+@api_router.post("/handler/check-in")
+async def handler_check_in(check_in: CheckInRequest):
+    """Handler checks in on arrival at booking location"""
+    # Validate booking exists
+    booking = await db.bookings.find_one({"_id": ObjectId(check_in.booking_id)})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Validate handler is assigned to this booking
+    if booking.get("handler_id") != check_in.handler_id:
+        raise HTTPException(status_code=403, detail="Handler not assigned to this booking")
+    
+    # Update booking with check-in information
+    update_data = {
+        "check_in_time": datetime.utcnow(),
+        "check_in_location": {
+            "latitude": check_in.latitude,
+            "longitude": check_in.longitude
+        },
+        "status": "in_progress",
+        "actual_start": datetime.utcnow()
+    }
+    
+    if check_in.check_in_photo:
+        update_data["check_in_photo"] = check_in.check_in_photo
+    
+    await db.bookings.update_one(
+        {"_id": ObjectId(check_in.booking_id)},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Check-in successful", "check_in_time": update_data["check_in_time"]}
+
+@api_router.post("/handler/check-out")
+async def handler_check_out(check_out: CheckOutRequest):
+    """Handler checks out after completing the job"""
+    # Validate booking exists
+    booking = await db.bookings.find_one({"_id": ObjectId(check_out.booking_id)})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Validate handler is assigned to this booking
+    if booking.get("handler_id") != check_out.handler_id:
+        raise HTTPException(status_code=403, detail="Handler not assigned to this booking")
+    
+    # Validate that handler has checked in
+    if not booking.get("check_in_time"):
+        raise HTTPException(status_code=400, detail="Must check in before checking out")
+    
+    # Update booking with check-out information
+    update_data = {
+        "check_out_time": datetime.utcnow(),
+        "check_out_location": {
+            "latitude": check_out.latitude,
+            "longitude": check_out.longitude
+        },
+        "status": "completed",
+        "actual_end": datetime.utcnow()
+    }
+    
+    if check_out.check_out_photo:
+        update_data["check_out_photo"] = check_out.check_out_photo
+    
+    if check_out.completion_notes:
+        update_data["completion_notes"] = check_out.completion_notes
+    
+    await db.bookings.update_one(
+        {"_id": ObjectId(check_out.booking_id)},
+        {"$set": update_data}
+    )
+    
+    # Calculate payment amount and add to handler's wallet
+    service_price = booking.get("service_price", 0)
+    handler_id = check_out.handler_id
+    
+    # Get or create handler wallet
+    handler = await db.users.find_one({"_id": ObjectId(handler_id)})
+    if handler:
+        current_wallet_balance = handler.get("wallet_balance", 0)
+        new_balance = current_wallet_balance + service_price
+        
+        await db.users.update_one(
+            {"_id": ObjectId(handler_id)},
+            {"$set": {"wallet_balance": new_balance}}
+        )
+        
+        # Create wallet transaction record
+        await db.wallet_transactions.insert_one({
+            "handler_id": handler_id,
+            "booking_id": check_out.booking_id,
+            "amount": service_price,
+            "type": "credit",
+            "description": f"Payment for booking {check_out.booking_id}",
+            "balance_after": new_balance,
+            "created_at": datetime.utcnow()
+        })
+    
+    return {
+        "message": "Check-out successful",
+        "check_out_time": update_data["check_out_time"],
+        "payment_added": service_price,
+        "new_wallet_balance": new_balance if handler else 0
+    }
+
+@api_router.get("/handler/{handler_id}/wallet")
+async def get_handler_wallet(handler_id: str):
+    """Get handler's wallet balance and transaction history"""
+    handler = await db.users.find_one({"_id": ObjectId(handler_id)})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    wallet_balance = handler.get("wallet_balance", 0)
+    
+    # Get transaction history
+    transactions = await db.wallet_transactions.find(
+        {"handler_id": handler_id}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {
+        "handler_id": handler_id,
+        "wallet_balance": wallet_balance,
+        "transactions": [serialize_doc(t) for t in transactions]
+    }
+
+@api_router.post("/handler/bank-account")
+async def update_handler_bank_account(request: BankAccountUpdateRequest):
+    """Update handler's bank account details with email verification"""
+    handler = await db.users.find_one({"_id": ObjectId(request.handler_id)})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    # Store pending bank account update
+    pending_update = {
+        "handler_id": request.handler_id,
+        "bank_account": request.bank_account.dict(),
+        "status": "pending_verification",
+        "verification_token": str(ObjectId()),  # Generate unique token
+        "created_at": datetime.utcnow(),
+        "expires_at": datetime.utcnow() + timedelta(hours=24)
+    }
+    
+    await db.pending_bank_updates.insert_one(pending_update)
+    
+    # TODO: Send verification email to handler
+    # For now, return the verification token
+    
+    return {
+        "message": "Verification email sent. Please check your email to confirm the bank account update.",
+        "verification_token": pending_update["verification_token"],
+        "status": "pending_verification"
+    }
+
+@api_router.post("/handler/bank-account/verify/{token}")
+async def verify_bank_account_update(token: str):
+    """Verify and apply bank account update"""
+    pending_update = await db.pending_bank_updates.find_one({"verification_token": token})
+    
+    if not pending_update:
+        raise HTTPException(status_code=404, detail="Verification token not found")
+    
+    if pending_update.get("status") == "verified":
+        raise HTTPException(status_code=400, detail="This verification has already been used")
+    
+    if datetime.utcnow() > pending_update.get("expires_at"):
+        raise HTTPException(status_code=400, detail="Verification token has expired")
+    
+    # Update handler's bank account
+    await db.users.update_one(
+        {"_id": ObjectId(pending_update["handler_id"])},
+        {"$set": {"bank_account": pending_update["bank_account"]}}
+    )
+    
+    # Mark pending update as verified
+    await db.pending_bank_updates.update_one(
+        {"verification_token": token},
+        {"$set": {"status": "verified", "verified_at": datetime.utcnow()}}
+    )
+    
+    return {
+        "message": "Bank account updated successfully",
+        "bank_account": pending_update["bank_account"]
+    }
+
+@api_router.get("/handler/{handler_id}/bank-account")
+async def get_handler_bank_account(handler_id: str):
+    """Get handler's bank account details"""
+    handler = await db.users.find_one({"_id": ObjectId(handler_id)})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    bank_account = handler.get("bank_account")
+    if not bank_account:
+        return {"message": "No bank account on file", "bank_account": None}
+    
+    # Return masked account number for security
+    masked_account = bank_account.copy()
+    if "account_number" in masked_account:
+        masked_account["account_number"] = "****" + masked_account["account_number"][-4:]
+    
+    return {"bank_account": masked_account}
+
+@api_router.post("/handler/availability")
+async def update_handler_availability(request: HandlerAvailabilityUpdate):
+    """Update handler's availability calendar for up to 1 month"""
+    handler = await db.users.find_one({"_id": ObjectId(request.handler_id)})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    # Validate dates are within 1 month from now
+    today = datetime.utcnow().date()
+    one_month_later = today + timedelta(days=30)
+    
+    for slot in request.availability_slots:
+        slot_date = datetime.strptime(slot.date, "%Y-%m-%d").date()
+        if slot_date < today or slot_date > one_month_later:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Date {slot.date} is outside the allowed range (today to 30 days ahead)"
+            )
+    
+    # Store availability
+    availability_data = {
+        "handler_id": request.handler_id,
+        "availability_slots": [slot.dict() for slot in request.availability_slots],
+        "updated_at": datetime.utcnow()
+    }
+    
+    # Upsert availability
+    await db.handler_availability.update_one(
+        {"handler_id": request.handler_id},
+        {"$set": availability_data},
+        upsert=True
+    )
+    
+    return {
+        "message": "Availability updated successfully",
+        "slots_updated": len(request.availability_slots)
+    }
+
+@api_router.get("/handler/{handler_id}/availability")
+async def get_handler_availability(handler_id: str):
+    """Get handler's availability calendar"""
+    availability = await db.handler_availability.find_one({"handler_id": handler_id})
+    
+    if not availability:
+        return {"handler_id": handler_id, "availability_slots": []}
+    
+    return {
+        "handler_id": handler_id,
+        "availability_slots": availability.get("availability_slots", []),
+        "updated_at": availability.get("updated_at")
+    }
+
 # ==================== Payment Routes ====================
 
 @api_router.post("/checkout/session")
