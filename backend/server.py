@@ -2888,6 +2888,274 @@ async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
 
 # Include the router in the main app
+# ==================== Partner System Routes ====================
+
+HEALTHCARE_CATEGORIES = [
+    "Baby Sitter",
+    "Dog Sitter", 
+    "Mental Support Worker",
+    "Domiciliary Care Worker",
+    "Support Worker (Sit-in)"
+]
+
+@api_router.post("/partner/register")
+async def register_partner(partner: PartnerCreate):
+    """Register a new healthcare partner"""
+    # Check if partner email already exists
+    existing = await db.partners.find_one({"email": partner.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Partner with this email already exists")
+    
+    # Validate healthcare category
+    if partner.healthcare_category not in HEALTHCARE_CATEGORIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid healthcare category. Must be one of: {', '.join(HEALTHCARE_CATEGORIES)}"
+        )
+    
+    # Hash password
+    import bcrypt
+    hashed_password = bcrypt.hashpw(partner.password.encode('utf-8'), bcrypt.gensalt())
+    
+    partner_dict = partner.dict()
+    partner_dict["password"] = hashed_password.decode('utf-8')
+    partner_dict["status"] = "pending"  # Pending admin approval
+    partner_dict["handler_count"] = 0
+    partner_dict["created_at"] = datetime.utcnow()
+    
+    result = await db.partners.insert_one(partner_dict)
+    
+    # Notify admin of new partner registration
+    await send_admin_alert_email(
+        subject="🏥 New Partner Registration - ExperTrait",
+        body=f"""
+        A new healthcare partner has registered:
+        
+        Organization: {partner.organization_name}
+        Contact: {partner.name}
+        Email: {partner.email}
+        Category: {partner.healthcare_category}
+        License: {partner.license_number}
+        
+        Please review and approve/reject from the admin dashboard.
+        Partner ID: {str(result.inserted_id)}
+        """
+    )
+    
+    return {
+        "message": "Partner registration submitted. Pending admin approval.",
+        "partner_id": str(result.inserted_id),
+        "status": "pending"
+    }
+
+@api_router.post("/partner/login")
+async def partner_login(login: PartnerLogin):
+    """Partner login"""
+    partner = await db.partners.find_one({"email": login.email})
+    if not partner:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Verify password
+    import bcrypt
+    if not bcrypt.checkpw(login.password.encode('utf-8'), partner["password"].encode('utf-8')):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Check if approved
+    if partner.get("status") != "approved":
+        raise HTTPException(
+            status_code=403,
+            detail=f"Partner account is {partner.get('status', 'pending')}. Please wait for admin approval."
+        )
+    
+    return PartnerResponse(**serialize_doc(partner))
+
+@api_router.get("/partner/{partner_id}/handlers")
+async def get_partner_handlers(partner_id: str):
+    """Get all handlers assigned to this partner"""
+    if not ObjectId.is_valid(partner_id):
+        raise HTTPException(status_code=400, detail="Invalid partner ID")
+    
+    # Get handlers assigned to this partner
+    handlers = await db.users.find({
+        "user_type": "handler",
+        "partner_id": partner_id,
+        "skills": {"$in": HEALTHCARE_CATEGORIES}
+    }).to_list(100)
+    
+    handler_list = []
+    for handler in handlers:
+        # Get handler stats
+        total_jobs = await db.bookings.count_documents({"handler_id": str(handler["_id"])})
+        
+        handler_list.append({
+            "id": str(handler["_id"]),
+            "name": handler.get("name"),
+            "email": handler.get("email"),
+            "phone": handler.get("phone"),
+            "skills": handler.get("skills", []),
+            "status": handler.get("status", "pending"),
+            "total_jobs": total_jobs,
+            "created_at": handler.get("created_at")
+        })
+    
+    return {"handlers": handler_list, "total": len(handler_list)}
+
+@api_router.get("/partner/{partner_id}/bookings")
+async def get_partner_bookings(partner_id: str):
+    """Get all bookings for handlers under this partner"""
+    if not ObjectId.is_valid(partner_id):
+        raise HTTPException(status_code=400, detail="Invalid partner ID")
+    
+    # Get all handlers under this partner
+    handlers = await db.users.find({
+        "partner_id": partner_id,
+        "user_type": "handler"
+    }).to_list(100)
+    
+    handler_ids = [str(h["_id"]) for h in handlers]
+    
+    # Get bookings for these handlers
+    bookings = await db.bookings.find({
+        "handler_id": {"$in": handler_ids},
+        "service_category": {"$in": HEALTHCARE_CATEGORIES}
+    }).sort("created_at", -1).to_list(100)
+    
+    return {
+        "bookings": [serialize_doc(b) for b in bookings],
+        "total": len(bookings)
+    }
+
+@api_router.put("/admin/partners/{partner_id}/status")
+async def admin_update_partner_status(partner_id: str, status: str):
+    """Admin approves/rejects partner application"""
+    if status not in ["approved", "rejected", "suspended"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    if not ObjectId.is_valid(partner_id):
+        raise HTTPException(status_code=400, detail="Invalid partner ID")
+    
+    partner = await db.partners.find_one({"_id": ObjectId(partner_id)})
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    await db.partners.update_one(
+        {"_id": ObjectId(partner_id)},
+        {"$set": {"status": status, "status_updated_at": datetime.utcnow()}}
+    )
+    
+    # Send email to partner
+    partner_email = partner.get("email")
+    if status == "approved":
+        subject = "✅ Partner Application Approved - ExperTrait"
+        body = f"""
+        <h2>Congratulations!</h2>
+        <p>Your partner application has been approved.</p>
+        <p>Organization: {partner.get('organization_name')}</p>
+        <p>You can now login to your partner dashboard and start managing healthcare workers.</p>
+        """
+    else:
+        subject = "Partner Application Update - ExperTrait"
+        body = f"""
+        <h2>Application Status Update</h2>
+        <p>Your partner application status: {status.upper()}</p>
+        <p>Organization: {partner.get('organization_name')}</p>
+        """
+    
+    await send_verification_email(partner_email, subject, body)
+    
+    return {"message": f"Partner status updated to {status}"}
+
+@api_router.post("/admin/handlers/{handler_id}/assign-partner")
+async def admin_assign_handler_to_partner(handler_id: str, assignment: HandlerPartnerAssignment):
+    """Admin assigns a healthcare handler to a partner"""
+    if not ObjectId.is_valid(handler_id) or not ObjectId.is_valid(assignment.partner_id):
+        raise HTTPException(status_code=400, detail="Invalid ID")
+    
+    handler = await db.users.find_one({"_id": ObjectId(handler_id), "user_type": "handler"})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    partner = await db.partners.find_one({"_id": ObjectId(assignment.partner_id)})
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    # Check if handler has healthcare skills
+    handler_skills = handler.get("skills", [])
+    is_healthcare = any(skill in HEALTHCARE_CATEGORIES for skill in handler_skills)
+    
+    if not is_healthcare:
+        raise HTTPException(
+            status_code=400,
+            detail="Handler must have healthcare category skills to be assigned to a partner"
+        )
+    
+    # Assign handler to partner
+    await db.users.update_one(
+        {"_id": ObjectId(handler_id)},
+        {"$set": {
+            "partner_id": assignment.partner_id,
+            "partner_assignment_notes": assignment.admin_notes,
+            "partner_assigned_at": datetime.utcnow()
+        }}
+    )
+    
+    # Update partner handler count
+    await db.partners.update_one(
+        {"_id": ObjectId(assignment.partner_id)},
+        {"$inc": {"handler_count": 1}}
+    )
+    
+    # Notify partner
+    partner_email = partner.get("email")
+    await send_verification_email(
+        partner_email,
+        "New Handler Assigned - ExperTrait",
+        f"""
+        <h2>New Handler Assigned</h2>
+        <p>A new healthcare worker has been assigned to your organization:</p>
+        <ul>
+            <li>Name: {handler.get('name')}</li>
+            <li>Email: {handler.get('email')}</li>
+            <li>Skills: {', '.join(handler_skills)}</li>
+        </ul>
+        <p>You can now supervise this handler from your partner dashboard.</p>
+        """
+    )
+    
+    # Notify handler
+    handler_email = handler.get("email")
+    await send_verification_email(
+        handler_email,
+        "Assigned to Healthcare Partner - ExperTrait",
+        f"""
+        <h2>Partner Assignment</h2>
+        <p>You have been assigned to a healthcare partner organization:</p>
+        <p>Organization: {partner.get('organization_name')}</p>
+        <p>This partner will supervise your healthcare-related bookings.</p>
+        """
+    )
+    
+    return {
+        "message": "Handler assigned to partner successfully",
+        "handler_id": handler_id,
+        "partner_id": assignment.partner_id
+    }
+
+@api_router.get("/admin/partners")
+async def admin_get_partners(status: Optional[str] = None):
+    """Admin gets all partners"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    partners = await db.partners.find(query).sort("created_at", -1).to_list(100)
+    
+    partner_list = []
+    for partner in partners:
+        partner_list.append(PartnerResponse(**serialize_doc(partner)))
+    
+    return {"partners": partner_list, "total": len(partner_list)}
+
 app.include_router(api_router)
 
 # Serve landing page
