@@ -306,9 +306,24 @@ async def create_service(service: ServiceCreate):
 
 # ==================== Booking Routes ====================
 
+class BulkBookingCreate(BaseModel):
+    service_ids: List[str]
+    customer_id: str
+    scheduled_date: str
+    time_range_start: str
+    time_range_end: str
+    location: LocationModel
+    notes: Optional[str] = None
+    booking_type: str = "one-off"
+    terms_agreed: bool = False
+
 @api_router.post("/bookings", response_model=BookingResponse)
 async def create_booking(booking: BookingCreate):
-    """Create a new booking"""
+    """Create a single booking"""
+    # Validate terms agreed
+    if not booking.terms_agreed:
+        raise HTTPException(status_code=400, detail="You must agree to the terms before booking")
+    
     # Get service details
     service = await db.services.find_one({"_id": ObjectId(booking.service_id)})
     if not service:
@@ -322,6 +337,7 @@ async def create_booking(booking: BookingCreate):
     booking_dict = booking.dict()
     booking_dict["service_name"] = service["name"]
     booking_dict["service_price"] = service["fixed_price"]
+    booking_dict["service_category"] = service.get("category", booking.service_category)
     booking_dict["status"] = "pending"
     booking_dict["payment_status"] = "pending"
     booking_dict["created_at"] = datetime.utcnow()
@@ -332,6 +348,70 @@ async def create_booking(booking: BookingCreate):
     result = await db.bookings.insert_one(booking_dict)
     created_booking = await db.bookings.find_one({"_id": result.inserted_id})
     return BookingResponse(**serialize_doc(created_booking))
+
+@api_router.post("/bookings/bulk")
+async def create_bulk_bookings(bulk_booking: BulkBookingCreate):
+    """Create multiple bookings, automatically splitting by category"""
+    # Validate terms agreed
+    if not bulk_booking.terms_agreed:
+        raise HTTPException(status_code=400, detail="You must agree to the terms before booking")
+    
+    # Get customer details
+    customer = await db.users.find_one({"_id": ObjectId(bulk_booking.customer_id)})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Get all services and group by category
+    services_by_category = {}
+    for service_id in bulk_booking.service_ids:
+        service = await db.services.find_one({"_id": ObjectId(service_id)})
+        if not service:
+            continue
+        
+        category = service.get("category", "General")
+        if category not in services_by_category:
+            services_by_category[category] = []
+        services_by_category[category].append(service)
+    
+    # Create separate bookings for each category
+    created_bookings = []
+    for category, services in services_by_category.items():
+        # Calculate total price for services in this category
+        total_price = sum(s["fixed_price"] for s in services)
+        service_names = ", ".join(s["name"] for s in services)
+        service_ids_list = [str(s["_id"]) for s in services]
+        
+        booking_dict = {
+            "service_id": service_ids_list[0] if len(service_ids_list) == 1 else None,
+            "service_ids": service_ids_list,
+            "customer_id": bulk_booking.customer_id,
+            "service_name": service_names,
+            "service_price": total_price,
+            "service_category": category,
+            "status": "pending",
+            "scheduled_date": bulk_booking.scheduled_date,
+            "time_range_start": bulk_booking.time_range_start,
+            "time_range_end": bulk_booking.time_range_end,
+            "location": bulk_booking.location.dict(),
+            "notes": bulk_booking.notes,
+            "booking_type": bulk_booking.booking_type,
+            "terms_agreed": bulk_booking.terms_agreed,
+            "payment_status": "pending",
+            "created_at": datetime.utcnow(),
+            "handler_id": None,
+            "actual_start": None,
+            "actual_end": None
+        }
+        
+        result = await db.bookings.insert_one(booking_dict)
+        created_booking = await db.bookings.find_one({"_id": result.inserted_id})
+        created_bookings.append(serialize_doc(created_booking))
+    
+    return {
+        "message": f"Created {len(created_bookings)} booking(s) grouped by category",
+        "bookings": created_bookings,
+        "total_bookings": len(created_bookings)
+    }
 
 @api_router.get("/bookings/customer/{customer_id}", response_model=List[BookingResponse])
 async def get_customer_bookings(customer_id: str):
