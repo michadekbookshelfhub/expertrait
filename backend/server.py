@@ -137,6 +137,8 @@ class ServiceCreate(BaseModel):
     fixed_price: float
     estimated_duration: int  # in minutes
     image_base64: Optional[str] = None
+    included_items: Optional[List[str]] = []
+    excluded_items: Optional[List[str]] = []
 
 class ServiceResponse(BaseModel):
     id: str
@@ -146,6 +148,8 @@ class ServiceResponse(BaseModel):
     fixed_price: float
     estimated_duration: int
     image_base64: Optional[str] = None
+    included_items: Optional[List[str]] = []
+    excluded_items: Optional[List[str]] = []
     created_at: datetime
 
 class BookingCreate(BaseModel):
