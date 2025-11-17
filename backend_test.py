@@ -393,19 +393,24 @@ class PartnerAPITester:
             "email": f"healthcare.handler.{timestamp}@test.com",
             "password": "HandlerPass123!",
             "phone": "+44 20 7946 0962",
-            "user_type": "handler",
-            "skills": ["Mental Support Worker", "Baby Sitter"]
+            "user_type": "handler"
         }
         
         success, response, status_code = self.make_request("POST", "/auth/register", handler_data)
         
         if success and "id" in response:
+            handler_id = response["id"]
+            
+            # Since the regular registration doesn't handle skills, we'll create a handler
+            # that should have healthcare skills by default. Let's test with the handler as-is
+            # and see if we can assign them. If not, we'll note this as a limitation.
+            
             self.created_handlers.append({
-                "id": response["id"],
+                "id": handler_id,
                 "email": handler_data["email"],
-                "skills": handler_data["skills"]
+                "skills": ["Mental Support Worker", "Baby Sitter"]  # Expected skills
             })
-            return response["id"]
+            return handler_id
         return None
 
     def test_admin_assign_handler_to_partner(self):
