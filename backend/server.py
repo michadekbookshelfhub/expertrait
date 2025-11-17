@@ -28,6 +28,18 @@ db = client[os.environ['DB_NAME']]
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@expertrait.com')
+
+# Email helper function (stub - replace with actual email service)
+async def send_admin_alert_email(subject: str, body: str):
+    """Send alert email to admin - stub implementation"""
+    # TODO: Integrate with SendGrid, AWS SES, or other email service
+    print(f"📧 ADMIN ALERT EMAIL")
+    print(f"To: {ADMIN_EMAIL}")
+    print(f"Subject: {subject}")
+    print(f"Body: {body}")
+    # In production, use an actual email service
+    return True
 
 # Create the main app
 app = FastAPI(title="Oscar Home Services API")
