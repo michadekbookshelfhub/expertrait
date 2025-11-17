@@ -218,6 +218,17 @@ class PaymentRequest(BaseModel):
     booking_id: str
     origin_url: str
 
+class BulkBookingCreate(BaseModel):
+    service_ids: List[str]
+    customer_id: str
+    scheduled_date: str
+    time_range_start: str
+    time_range_end: str
+    location: LocationModel
+    notes: Optional[str] = None
+    booking_type: str = "one-off"
+    terms_agreed: bool = False
+
 # ==================== Utility Functions ====================
 
 def hash_password(password: str) -> str:
