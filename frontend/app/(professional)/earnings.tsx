@@ -40,12 +40,27 @@ export default function Earnings() {
     try {
       setLoading(true);
       const response = await fetch(
-        `${API_URL}/api/professionals/${user.id}/earnings`
+        `${API_URL}/api/handler/${user.id}/wallet`
       );
       
       if (response.ok) {
         const data = await response.json();
-        setEarnings(data);
+        // Transform wallet data to earnings format
+        const transformedData = {
+          total_earnings: data.wallet_balance || 0,
+          total_jobs: data.transactions?.filter((t: any) => t.type === 'credit').length || 0,
+          average_per_job: data.transactions?.length > 0 
+            ? data.transactions.reduce((sum: number, t: any) => sum + (t.type === 'credit' ? t.amount : 0), 0) / data.transactions.filter((t: any) => t.type === 'credit').length 
+            : 0,
+          month_earnings: data.wallet_balance || 0,
+          earnings_history: data.transactions?.map((t: any) => ({
+            booking_id: t.booking_id || t.id,
+            service_name: t.description,
+            amount: t.amount,
+            completed_date: t.created_at
+          })) || []
+        };
+        setEarnings(transformedData);
       }
     } catch (error) {
       console.error('Failed to load earnings:', error);
