@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timedelta
 from bson import ObjectId
 import bcrypt
 import json
+import stripe
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
