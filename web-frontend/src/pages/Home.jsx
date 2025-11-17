@@ -420,6 +420,107 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Healthcare Partnership Section */}
+        <section className="py-16 md:py-20 bg-gradient-to-br from-green-50 to-teal-50">
+          <div className="container mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="max-w-5xl mx-auto"
+            >
+              <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 border-2 border-green-100">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-8 h-8 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                      Healthcare Services Partnership
+                    </h2>
+                    <p className="text-lg text-gray-600">
+                      Your trusted partner for professional healthcare services
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-6 mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <Award className="w-6 h-6 text-green-600 mt-1" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-green-900 text-lg mb-2">
+                        Licensed Healthcare Provider Network
+                      </h3>
+                      <p className="text-gray-700 leading-relaxed">
+                        <strong>ExperTrait partners with reliable licensed healthcare organizations</strong> for all healthcare-related services including Baby Sitting, Dog Sitting, Mental Support Work, Domiciliary Care, and Support Work (Sit-in).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Quality Assurance</h4>
+                    </div>
+                    <p className="text-gray-600 text-sm">
+                      All healthcare partners are thoroughly vetted, licensed, and meet our strict quality standards
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <Users className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Professional Supervision</h4>
+                    </div>
+                    <p className="text-gray-600 text-sm">
+                      Healthcare services are managed and supervised directly by our licensed partner organizations
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <ThumbsUp className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Peace of Mind</h4>
+                    </div>
+                    <p className="text-gray-600 text-sm">
+                      Rest assured that healthcare professionals are certified, insured, and background-checked
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">24/7 Support</h4>
+                    </div>
+                    <p className="text-gray-600 text-sm">
+                      Round-the-clock support and coordination between you and our healthcare partners
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-8 p-5 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900 leading-relaxed">
+                    <strong>Important:</strong> ExperTrait does not directly employ or assign healthcare workers. We connect you with licensed healthcare organizations who manage, supervise, and ensure the quality of all healthcare services provided.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
         {/* CTA Section */}
         <section className="py-16 md:py-24 bg-gradient-to-br from-orange-600 to-orange-700 relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
