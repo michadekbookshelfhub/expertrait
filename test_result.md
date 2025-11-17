@@ -594,10 +594,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Partner Registration API"
-    - "Partner Login API"
-    - "Partner Handler Management APIs"
-    - "Admin Partner Management APIs"
     - "Partner Login Page"
     - "Partner Dashboard Page"
   stuck_tasks: []
