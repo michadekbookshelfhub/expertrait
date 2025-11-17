@@ -14,53 +14,7 @@ export default function AuthButtons({ variant = "default" }) {
     navigate(createPageUrl("DownloadApp"));
   };
 
-  if (user) {
-    // Logged in state
-    if (variant === "mobile") {
-      return (
-        <div className="flex flex-col gap-2 w-full">
-          <Button
-            onClick={handleDashboard}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-          >
-            <LayoutDashboard className="w-4 h-4 mr-2" />
-            My Dashboard
-          </Button>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="w-full"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex items-center gap-3">
-        <Button
-          onClick={handleDashboard}
-          variant="outline"
-          className="border-orange-600 text-orange-600 hover:bg-orange-50"
-        >
-          <LayoutDashboard className="w-4 h-4 mr-2" />
-          Dashboard
-        </Button>
-        <Button
-          onClick={handleLogout}
-          variant="ghost"
-          className="text-gray-700 hover:text-orange-600"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Logout
-        </Button>
-      </div>
-    );
-  }
-
-  // Logged out state
+  // Show download app button
   if (variant === "mobile") {
     return (
       <div className="flex flex-col gap-2 w-full">
