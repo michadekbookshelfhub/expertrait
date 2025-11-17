@@ -76,6 +76,13 @@ export default function Index() {
         Alert.alert('Error', 'Please fill in all fields');
         return;
       }
+      
+      // Validate skills for professionals
+      if (userType === 'professional' && selectedSkills.length === 0) {
+        Alert.alert('Error', 'Please select at least one skill/service you can provide');
+        return;
+      }
+      
       setIsLoading(true);
       try {
         await register({
@@ -84,6 +91,7 @@ export default function Index() {
           password,
           phone,
           user_type: userType,
+          skills: userType === 'professional' ? selectedSkills : [],
         });
       } catch (error: any) {
         Alert.alert('Registration Failed', error.message);
