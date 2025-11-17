@@ -68,6 +68,10 @@ const PAGES = {
     
     Admin: Admin,
     
+    PartnerLogin: PartnerLogin,
+    
+    PartnerDashboard: PartnerDashboard,
+    
 }
 
 function _getCurrentPage(url) {
