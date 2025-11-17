@@ -173,12 +173,17 @@ class BookingResponse(BaseModel):
     service_price: float
     service_category: Optional[str] = None
     status: str  # pending, accepted, in_progress, completed, cancelled
-    scheduled_date: str
-    time_range_start: str
-    time_range_end: str
+    scheduled_date: Optional[str] = None
+    time_range_start: Optional[str] = None
+    time_range_end: Optional[str] = None
+    scheduled_time: Optional[datetime] = None  # For backward compatibility
     actual_start: Optional[datetime] = None
     actual_end: Optional[datetime] = None
-    location: LocationModel
+    check_in_time: Optional[datetime] = None
+    check_in_location: Optional[LocationModel] = None
+    check_out_time: Optional[datetime] = None
+    check_out_location: Optional[LocationModel] = None
+    location: Optional[LocationModel] = None
     notes: Optional[str] = None
     booking_type: str = "one-off"
     terms_agreed: bool = False
