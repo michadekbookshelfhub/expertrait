@@ -1,54 +1,18 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserPlus, LogOut, LayoutDashboard } from "lucide-react";
+import { LogIn, UserPlus, Smartphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 export default function AuthButtons({ variant = "default" }) {
-  const [user, setUser] = React.useState(null);
-  const [isLoading, setIsLoading] = React.useState(true);
   const navigate = useNavigate();
 
-  React.useEffect(() => {
-    checkAuth();
-  }, []);
+  // Authentication is handled via mobile app
+  // Web interface is for browsing and downloading app
 
-  const checkAuth = async () => {
-    try {
-      const isAuthenticated = await base44.auth.isAuthenticated();
-      if (isAuthenticated) {
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-      }
-    } catch (error) {
-      console.log("Not authenticated");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleDownloadApp = () => {
+    navigate(createPageUrl("DownloadApp"));
   };
-
-  const handleLogin = () => {
-    base44.auth.redirectToLogin(createPageUrl("Home"));
-  };
-
-  const handleSignup = () => {
-    base44.auth.redirectToLogin(createPageUrl("Home"));
-  };
-
-  const handleLogout = () => {
-    base44.auth.logout();
-  };
-
-  const handleDashboard = () => {
-    // Default to UserDashboard for all users
-    // Both dashboards now show the mobile app download page
-    navigate(createPageUrl("UserDashboard"));
-  };
-
-  if (isLoading) {
-    return null;
-  }
 
   if (user) {
     // Logged in state
