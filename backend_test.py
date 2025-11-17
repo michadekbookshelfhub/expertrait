@@ -275,12 +275,13 @@ class PartnerAPITester:
     def test_admin_reject_partner(self):
         """Test admin rejecting a partner"""
         # Create another partner for rejection test
+        timestamp = int(time.time())
         partner_data = {
             "name": "Dr. Reject Test",
-            "email": "reject.test@healthcare.com",
+            "email": f"reject.test.{timestamp}@healthcare.com",
             "password": "RejectPass123!",
             "organization_name": "Reject Test Care",
-            "license_number": "RT-2024-001",
+            "license_number": f"RT-2024-{timestamp}",
             "phone": "+44 20 7946 0961",
             "address": "999 Reject Street, London, UK",
             "healthcare_category": "Dog Sitter"
