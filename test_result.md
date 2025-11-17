@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Complete the ExperTrait home screen overhaul and build admin dashboard. Implement dynamic home screen with category icons, featured services, custom task highlight, service recommendations, and popular combinations. Build admin dashboard for managing banners, featured categories, and category icons."
+user_problem_statement: "Complete Partner Dashboard integration, remove Base44 dependencies, and implement comprehensive testing. Tasks: 1) Integrate Partner Login/Dashboard routes, 2) Remove all Base44 SDK dependencies and rebrand to ExperTrait, 3) Backend API testing for Partner endpoints, 4) Frontend functionality testing, 5) Stripe Connect integration for handler payouts, 6) End-to-end testing of all workflows."
 
 backend:
   - task: "Authentication System"
