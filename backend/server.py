@@ -155,9 +155,14 @@ class ServiceResponse(BaseModel):
 class BookingCreate(BaseModel):
     service_id: str
     customer_id: str
-    scheduled_time: datetime
+    scheduled_date: str  # Date in YYYY-MM-DD format
+    time_range_start: str  # Time in HH:MM format
+    time_range_end: str  # Time in HH:MM format
     location: LocationModel
     notes: Optional[str] = None
+    booking_type: str = "one-off"  # "one-off" or "continuous"
+    terms_agreed: bool = False
+    service_category: Optional[str] = None
 
 class BookingResponse(BaseModel):
     id: str
@@ -166,12 +171,17 @@ class BookingResponse(BaseModel):
     handler_id: Optional[str] = None
     service_name: str
     service_price: float
+    service_category: Optional[str] = None
     status: str  # pending, accepted, in_progress, completed, cancelled
-    scheduled_time: datetime
+    scheduled_date: str
+    time_range_start: str
+    time_range_end: str
     actual_start: Optional[datetime] = None
     actual_end: Optional[datetime] = None
     location: LocationModel
     notes: Optional[str] = None
+    booking_type: str = "one-off"
+    terms_agreed: bool = False
     payment_status: str = "pending"
     created_at: datetime
 
