@@ -462,9 +462,10 @@ class PartnerAPITester:
             return
             
         # Create a handler without healthcare skills
+        timestamp = int(time.time())
         handler_data = {
             "name": "Regular Handler",
-            "email": "regular.handler@test.com",
+            "email": f"regular.handler.{timestamp}@test.com",
             "password": "RegularPass123!",
             "phone": "+44 20 7946 0963",
             "user_type": "handler",
