@@ -3189,6 +3189,248 @@ async def admin_get_partners(status: Optional[str] = None):
     
     return {"partners": partner_list, "total": len(partner_list)}
 
+# ==================== Stripe Connect Routes ====================
+
+@api_router.post("/stripe/connect/onboard")
+async def stripe_connect_onboard(request: StripeConnectOnboarding):
+    """Start Stripe Connect onboarding for a handler"""
+    if not ObjectId.is_valid(request.handler_id):
+        raise HTTPException(status_code=400, detail="Invalid handler ID")
+    
+    handler = await db.users.find_one({"_id": ObjectId(request.handler_id), "user_type": "handler"})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    try:
+        # Get active Stripe key
+        secret_key, _ = await get_stripe_key()
+        stripe.api_key = secret_key
+        
+        # Check if handler already has a Stripe account
+        stripe_account_id = handler.get("stripe_account_id")
+        
+        if not stripe_account_id:
+            # Create new Connected Account
+            account = stripe.Account.create(
+                type="express",
+                country="GB",  # United Kingdom
+                email=handler.get("email"),
+                capabilities={
+                    "card_payments": {"requested": True},
+                    "transfers": {"requested": True},
+                },
+                business_type="individual",
+                metadata={
+                    "handler_id": request.handler_id,
+                    "handler_name": handler.get("name")
+                }
+            )
+            
+            stripe_account_id = account.id
+            
+            # Save Stripe account ID to handler
+            await db.users.update_one(
+                {"_id": ObjectId(request.handler_id)},
+                {"$set": {
+                    "stripe_account_id": stripe_account_id,
+                    "stripe_onboarding_started_at": datetime.utcnow()
+                }}
+            )
+        
+        # Create Account Link for onboarding
+        account_link = stripe.AccountLink.create(
+            account=stripe_account_id,
+            refresh_url=request.refresh_url,
+            return_url=request.return_url,
+            type="account_onboarding",
+        )
+        
+        return {
+            "onboarding_url": account_link.url,
+            "stripe_account_id": stripe_account_id,
+            "expires_at": account_link.expires_at
+        }
+        
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
+@api_router.get("/stripe/connect/status/{handler_id}")
+async def stripe_connect_status(handler_id: str):
+    """Get Stripe Connect account status for a handler"""
+    if not ObjectId.is_valid(handler_id):
+        raise HTTPException(status_code=400, detail="Invalid handler ID")
+    
+    handler = await db.users.find_one({"_id": ObjectId(handler_id), "user_type": "handler"})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    stripe_account_id = handler.get("stripe_account_id")
+    if not stripe_account_id:
+        return {
+            "connected": False,
+            "details_submitted": False,
+            "charges_enabled": False,
+            "payouts_enabled": False
+        }
+    
+    try:
+        # Get active Stripe key
+        secret_key, _ = await get_stripe_key()
+        stripe.api_key = secret_key
+        
+        # Retrieve account from Stripe
+        account = stripe.Account.retrieve(stripe_account_id)
+        
+        return {
+            "connected": True,
+            "stripe_account_id": stripe_account_id,
+            "details_submitted": account.details_submitted,
+            "charges_enabled": account.charges_enabled,
+            "payouts_enabled": account.payouts_enabled,
+            "requirements": {
+                "currently_due": account.requirements.currently_due,
+                "eventually_due": account.requirements.eventually_due,
+                "past_due": account.requirements.past_due,
+            }
+        }
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
+@api_router.post("/stripe/payout")
+async def create_payout(request: StripePayoutRequest):
+    """Create a payout to a handler's Stripe Connected Account"""
+    if not ObjectId.is_valid(request.handler_id):
+        raise HTTPException(status_code=400, detail="Invalid handler ID")
+    
+    handler = await db.users.find_one({"_id": ObjectId(request.handler_id), "user_type": "handler"})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    stripe_account_id = handler.get("stripe_account_id")
+    if not stripe_account_id:
+        raise HTTPException(status_code=400, detail="Handler has not completed Stripe Connect onboarding")
+    
+    try:
+        # Get active Stripe key
+        secret_key, _ = await get_stripe_key()
+        stripe.api_key = secret_key
+        
+        # Verify account is active
+        account = stripe.Account.retrieve(stripe_account_id)
+        if not account.payouts_enabled:
+            raise HTTPException(status_code=400, detail="Handler's Stripe account is not enabled for payouts")
+        
+        # Convert amount to pence (Stripe uses smallest currency unit)
+        amount_pence = int(request.amount * 100)
+        
+        # Create transfer to Connected Account
+        transfer = stripe.Transfer.create(
+            amount=amount_pence,
+            currency="gbp",
+            destination=stripe_account_id,
+            description=request.description or f"Payout to {handler.get('name')}",
+            metadata={
+                "handler_id": request.handler_id,
+                "handler_name": handler.get("name"),
+                "booking_id": request.booking_id or "manual_payout"
+            }
+        )
+        
+        # Record payout in database
+        payout_record = {
+            "handler_id": request.handler_id,
+            "stripe_account_id": stripe_account_id,
+            "stripe_transfer_id": transfer.id,
+            "amount": request.amount,
+            "currency": "GBP",
+            "description": request.description,
+            "booking_id": request.booking_id,
+            "status": "completed",
+            "created_at": datetime.utcnow()
+        }
+        
+        await db.payouts.insert_one(payout_record)
+        
+        # Update handler wallet
+        await db.users.update_one(
+            {"_id": ObjectId(request.handler_id)},
+            {
+                "$inc": {"total_earnings": request.amount, "total_payouts": request.amount},
+                "$set": {"last_payout_at": datetime.utcnow()}
+            }
+        )
+        
+        return {
+            "success": True,
+            "transfer_id": transfer.id,
+            "amount": request.amount,
+            "currency": "GBP",
+            "handler_name": handler.get("name"),
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
+@api_router.get("/stripe/payouts/{handler_id}")
+async def get_handler_payouts(handler_id: str, limit: int = 50):
+    """Get payout history for a handler"""
+    if not ObjectId.is_valid(handler_id):
+        raise HTTPException(status_code=400, detail="Invalid handler ID")
+    
+    payouts = await db.payouts.find({"handler_id": handler_id}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return {
+        "payouts": [serialize_doc(p) for p in payouts],
+        "total": len(payouts)
+    }
+
+@api_router.get("/admin/stripe/settings")
+async def get_stripe_settings():
+    """Get Stripe settings (test/live mode)"""
+    settings = await db.company_settings.find_one()
+    if not settings:
+        return {
+            "use_live_stripe": False,
+            "test_mode": True,
+            "has_test_keys": bool(STRIPE_TEST_SECRET_KEY),
+            "has_live_keys": bool(STRIPE_LIVE_SECRET_KEY)
+        }
+    
+    return {
+        "use_live_stripe": settings.get("use_live_stripe", False),
+        "test_mode": not settings.get("use_live_stripe", False),
+        "has_test_keys": bool(STRIPE_TEST_SECRET_KEY),
+        "has_live_keys": bool(STRIPE_LIVE_SECRET_KEY)
+    }
+
+@api_router.put("/admin/stripe/settings")
+async def update_stripe_settings(request: StripeSettingsUpdate):
+    """Toggle between Stripe test and live modes"""
+    settings = await db.company_settings.find_one()
+    
+    if not settings:
+        # Create default settings
+        settings = {
+            "use_live_stripe": request.use_live_stripe,
+            "updated_at": datetime.utcnow(),
+            "created_at": datetime.utcnow()
+        }
+        await db.company_settings.insert_one(settings)
+    else:
+        await db.company_settings.update_one(
+            {"_id": settings["_id"]},
+            {"$set": {"use_live_stripe": request.use_live_stripe, "updated_at": datetime.utcnow()}}
+        )
+    
+    mode = "LIVE" if request.use_live_stripe else "TEST"
+    
+    return {
+        "message": f"Stripe mode updated to {mode}",
+        "use_live_stripe": request.use_live_stripe,
+        "mode": mode
+    }
+
 app.include_router(api_router)
 
 # Serve landing page
