@@ -30,6 +30,10 @@ import HandlerDashboard from "./HandlerDashboard";
 
 import Admin from "./Admin";
 
+import PartnerLogin from "./PartnerLogin";
+
+import PartnerDashboard from "./PartnerDashboard";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
