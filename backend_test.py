@@ -582,9 +582,10 @@ class PartnerAPITester:
             return None
             
         # Create a customer first
+        timestamp = int(time.time())
         customer_data = {
             "name": "Healthcare Customer",
-            "email": "healthcare.customer@test.com",
+            "email": f"healthcare.customer.{timestamp}@test.com",
             "password": "CustomerPass123!",
             "phone": "+44 20 7946 0964",
             "user_type": "customer"
