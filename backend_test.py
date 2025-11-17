@@ -429,8 +429,9 @@ class PartnerAPITester:
             
         partner_id = self.created_partners[0]["id"]
         assignment_data = {
+            "handler_id": handler_id,
             "partner_id": partner_id,
-            "assignment_notes": "Assigned for mental health support services"
+            "admin_notes": "Assigned for mental health support services"
         }
         
         success, response, status_code = self.make_request(
