@@ -144,7 +144,7 @@ export default function ProfilePro() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Notifications', 'Job alerts and updates\n\nComing soon!')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/notifications')}>
             <View style={styles.menuItemLeft}>
               <Ionicons
                 name="notifications-outline"
@@ -156,7 +156,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Language', 'English (US)\n\nMore languages coming soon!')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/language')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="language-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Language</Text>
