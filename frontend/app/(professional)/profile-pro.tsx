@@ -88,7 +88,7 @@ export default function ProfilePro() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Edit Profile', 'Profile editing feature coming soon!')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/edit-profile-pro')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="person-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Edit Profile</Text>
@@ -96,7 +96,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('My Skills', user?.skills?.join(', ') || 'No skills added yet')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/my-skills')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="briefcase-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>My Skills</Text>
@@ -104,7 +104,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Payment Methods', 'Bank account and payment settings\n\nComing soon!')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/payment-methods')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="card-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Payment Methods</Text>
