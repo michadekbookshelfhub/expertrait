@@ -582,7 +582,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Customer Bookings Screen"
+    - "Partner Registration API"
+    - "Partner Login API"
+    - "Partner Handler Management APIs"
+    - "Admin Partner Management APIs"
+    - "Partner Login Page"
+    - "Partner Dashboard Page"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
