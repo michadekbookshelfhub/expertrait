@@ -9,23 +9,37 @@ export default function ProfessionalLayout() {
         tabBarActiveTintColor: '#4CAF50',
         tabBarInactiveTintColor: '#999',
         headerShown: false,
+        tabBarStyle: {
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
       }}
     >
       <Tabs.Screen
-        name="dashboard"
+        name="profile-pro"
         options={{
-          title: 'Jobs',
+          title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase" size={size} color={color} />
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="active"
         options={{
-          title: 'Active',
+          title: 'Active Jobs',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="navigate" size={size} color={color} />
+            <Ionicons name="time" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'My Jobs',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="briefcase" size={size} color={color} />
           ),
         }}
       />
@@ -38,14 +52,38 @@ export default function ProfessionalLayout() {
           ),
         }}
       />
+      {/* Hide other professional screens from tab bar */}
       <Tabs.Screen
-        name="profile-pro"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }}
+        name="payment-methods"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="availability"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="service-area"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="reviews"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="edit-profile-pro"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="notifications-pro"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="language"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="help-center-pro"
+        options={{ href: null }}
       />
     </Tabs>
   );
