@@ -2069,14 +2069,23 @@ class TermsAndPolicy(BaseModel):
     cancellation_policy: Optional[str] = None
 
 class PartnerCreate(BaseModel):
-    name: str
+    # Company Representative Personal Details
+    representative_full_name: str
+    representative_phone: str
+    representative_address: str
+    representative_id_document: Optional[str] = None  # Base64 encoded ID
+    representative_job_role: str
+    
+    # Account Details
     email: EmailStr
     password: str
+    
+    # Company Details
     organization_name: str
+    company_phone: Optional[str] = None  # If different from personal
+    company_address: str
     license_number: str
     license_document: Optional[str] = None  # Base64 encoded
-    phone: str
-    address: str
     healthcare_category: str  # "Baby Sitter", "Dog Sitter", "Mental Support", "Domiciliary Care", "Support Worker"
 
 class PartnerResponse(BaseModel):
