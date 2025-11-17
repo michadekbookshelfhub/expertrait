@@ -134,9 +134,9 @@ export default function Home() {
   return (
     <>
       <SEO 
-        title="Professional Home Services in UK"
-        description="Connect with verified, skilled professionals for plumbing, electrical, carpentry, cleaning, and more. Quality service guaranteed. Book now on Expertrait."
-        keywords="home services UK, plumber UK, electrician UK, handyman UK, cleaning services UK, home repair UK, professional services Gillingham"
+        title="ExperTrait - Professional Home & Healthcare Services in UK | Licensed Partners"
+        description="Connect with verified professionals for plumbing, electrical, carpentry, cleaning, and licensed healthcare services. Baby sitting, dog sitting, care work through trusted partner organizations. Quality guaranteed. Book now on ExperTrait."
+        keywords="home services UK, plumber UK, electrician UK, handyman UK, cleaning services UK, baby sitter UK, dog sitter UK, care worker UK, domiciliary care UK, mental support worker UK, healthcare services UK, licensed care providers UK, professional services Gillingham, home repair UK"
         url="https://apps.expertrait.com"
         structuredData={structuredData}
       />
