@@ -1914,6 +1914,183 @@ class PromoCodeModel(BaseModel):
     active: bool = True
     applicable_services: Optional[List[str]] = None
 
+class ManualBookingAssignment(BaseModel):
+    booking_id: str
+    handler_id: str
+    admin_notes: Optional[str] = None
+
+class CompanySettings(BaseModel):
+    company_name: str
+    company_address: str
+    company_phone: str
+    company_email: str
+    support_email: Optional[str] = None
+    support_phone: Optional[str] = None
+
+class TermsAndPolicy(BaseModel):
+    terms_of_service: str
+    privacy_policy: str
+    cancellation_policy: Optional[str] = None
+
+# Manual Booking Assignment
+@api_router.post("/admin/bookings/{booking_id}/assign")
+async def admin_assign_booking(booking_id: str, assignment: ManualBookingAssignment):
+    """Manually assign a booking to a handler"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    if not ObjectId.is_valid(assignment.handler_id):
+        raise HTTPException(status_code=400, detail="Invalid handler ID")
+    
+    # Check if booking exists
+    booking = await db.bookings.find_one({"_id": ObjectId(booking_id)})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Check if handler exists and is available
+    handler = await db.users.find_one({"_id": ObjectId(assignment.handler_id), "user_type": "handler"})
+    if not handler:
+        raise HTTPException(status_code=404, detail="Handler not found")
+    
+    # Update booking with handler assignment
+    await db.bookings.update_one(
+        {"_id": ObjectId(booking_id)},
+        {"$set": {
+            "handler_id": assignment.handler_id,
+            "status": "accepted",
+            "manually_assigned": True,
+            "admin_notes": assignment.admin_notes,
+            "assigned_at": datetime.utcnow()
+        }}
+    )
+    
+    return {
+        "message": "Booking assigned successfully",
+        "booking_id": booking_id,
+        "handler_id": assignment.handler_id
+    }
+
+# Company Settings Management
+@api_router.get("/settings/company")
+async def get_company_settings():
+    """Get company settings"""
+    settings = await db.company_settings.find_one({"type": "company"})
+    
+    if not settings:
+        # Return default settings
+        return {
+            "company_name": "ExperTrait",
+            "company_address": "123 Main St, London, UK",
+            "company_phone": "+44 20 1234 5678",
+            "company_email": "info@expertrait.com",
+            "support_email": "support@expertrait.com",
+            "support_phone": "+44 20 1234 5679"
+        }
+    
+    return serialize_doc(settings)
+
+@api_router.put("/admin/settings/company")
+async def update_company_settings(settings: CompanySettings):
+    """Update company settings"""
+    settings_dict = settings.dict()
+    settings_dict["type"] = "company"
+    settings_dict["updated_at"] = datetime.utcnow()
+    
+    await db.company_settings.update_one(
+        {"type": "company"},
+        {"$set": settings_dict},
+        upsert=True
+    )
+    
+    return {"message": "Company settings updated successfully", "settings": settings_dict}
+
+# Terms and Policy Management
+@api_router.get("/settings/terms-policy")
+async def get_terms_and_policy():
+    """Get terms of service and privacy policy"""
+    terms_policy = await db.terms_policy.find_one({"type": "terms_policy"})
+    
+    if not terms_policy:
+        # Return default
+        return {
+            "terms_of_service": "Default Terms of Service",
+            "privacy_policy": "Default Privacy Policy",
+            "cancellation_policy": "Default Cancellation Policy"
+        }
+    
+    return serialize_doc(terms_policy)
+
+@api_router.put("/admin/settings/terms-policy")
+async def update_terms_and_policy(terms_policy: TermsAndPolicy):
+    """Update terms of service and privacy policy"""
+    terms_dict = terms_policy.dict()
+    terms_dict["type"] = "terms_policy"
+    terms_dict["updated_at"] = datetime.utcnow()
+    
+    await db.terms_policy.update_one(
+        {"type": "terms_policy"},
+        {"$set": terms_dict},
+        upsert=True
+    )
+    
+    return {"message": "Terms and policy updated successfully"}
+
+# Delete Account
+@api_router.delete("/user/{user_id}/account")
+async def delete_user_account(user_id: str, password: str):
+    """Delete user account - requires password confirmation"""
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify password
+    import bcrypt
+    if not bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # Check for active bookings
+    active_bookings = await db.bookings.count_documents({
+        "$or": [
+            {"customer_id": user_id, "status": {"$in": ["pending", "accepted", "in_progress"]}},
+            {"handler_id": user_id, "status": {"$in": ["accepted", "in_progress"]}}
+        ]
+    })
+    
+    if active_bookings > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete account with active bookings. Please complete or cancel them first."
+        )
+    
+    # Anonymize user data instead of hard delete
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {
+            "name": "Deleted User",
+            "email": f"deleted_{user_id}@deleted.com",
+            "password": "",
+            "phone": "",
+            "status": "deleted",
+            "deleted_at": datetime.utcnow()
+        }}
+    )
+    
+    # Anonymize related data
+    await db.bookings.update_many(
+        {"customer_id": user_id},
+        {"$set": {"customer_anonymized": True}}
+    )
+    
+    await db.bookings.update_many(
+        {"handler_id": user_id},
+        {"$set": {"handler_anonymized": True}}
+    )
+    
+    return {"message": "Account deleted successfully"}
+
 # User Management
 @api_router.get("/admin/users")
 async def admin_get_users(
