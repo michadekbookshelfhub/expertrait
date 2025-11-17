@@ -168,7 +168,7 @@ export default function ProfilePro() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Help Center', 'Need help?\n\nEmail: professional@expertrait.com\nPhone: 1-800-PRO-HELP\n\nAvailable 24/7')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/help-center-pro')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="help-circle-outline" size={24} color="#4CAF50" />
               <Text style={styles.menuItemText}>Help Center</Text>
@@ -176,7 +176,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Terms of Service', 'ExperTrait Professional Terms\n\nProfessional service provider agreement and guidelines.')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(customer)/terms-of-service')}>
             <View style={styles.menuItemLeft}>
               <Ionicons
                 name="document-text-outline"
@@ -188,7 +188,7 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Privacy Policy', 'ExperTrait Privacy Policy\n\nWe protect your professional information and data.')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(customer)/privacy-policy')}>
             <View style={styles.menuItemLeft}>
               <Ionicons
                 name="shield-checkmark-outline"
@@ -204,6 +204,11 @@ export default function ProfilePro() {
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#FFF" />
           <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={24} color="#D32F2F" />
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
         </TouchableOpacity>
 
         <Text style={styles.version}>Version 1.0.0</Text>
