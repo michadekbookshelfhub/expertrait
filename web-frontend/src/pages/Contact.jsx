@@ -34,8 +34,17 @@ export default function Contact() {
     setErrorMessage("");
 
     try {
-      // Save to database
-      await base44.entities.ContactMessage.create(contactForm);
+      // Save to backend API
+      const API_URL = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_URL}/api/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactForm)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
 
       // Clear form on success
       setContactForm({
