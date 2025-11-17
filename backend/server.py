@@ -317,17 +317,6 @@ async def create_service(service: ServiceCreate):
 
 # ==================== Booking Routes ====================
 
-class BulkBookingCreate(BaseModel):
-    service_ids: List[str]
-    customer_id: str
-    scheduled_date: str
-    time_range_start: str
-    time_range_end: str
-    location: LocationModel
-    notes: Optional[str] = None
-    booking_type: str = "one-off"
-    terms_agreed: bool = False
-
 @api_router.post("/bookings", response_model=BookingResponse)
 async def create_booking(booking: BookingCreate):
     """Create a single booking"""
