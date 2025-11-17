@@ -92,6 +92,22 @@ function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
     
+    // Routes that don't need Layout wrapper (standalone pages)
+    const standaloneRoutes = ['/Admin', '/partner-login', '/partner-dashboard'];
+    const isStandalone = standaloneRoutes.some(route => 
+        location.pathname.toLowerCase() === route.toLowerCase()
+    );
+    
+    if (isStandalone) {
+        return (
+            <Routes>
+                <Route path="/Admin" element={<Admin />} />
+                <Route path="/partner-login" element={<PartnerLogin />} />
+                <Route path="/partner-dashboard" element={<PartnerDashboard />} />
+            </Routes>
+        );
+    }
+    
     return (
         <Layout currentPageName={currentPage}>
             <Routes>            
@@ -126,8 +142,6 @@ function PagesContent() {
                 <Route path="/UserDashboard" element={<UserDashboard />} />
                 
                 <Route path="/HandlerDashboard" element={<HandlerDashboard />} />
-                
-                <Route path="/Admin" element={<Admin />} />
                 
             </Routes>
         </Layout>
