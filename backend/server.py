@@ -1019,8 +1019,30 @@ async def update_handler_bank_account(request: BankAccountUpdateRequest):
     
     await db.pending_bank_updates.insert_one(pending_update)
     
-    # TODO: Send verification email to handler
-    # For now, return the verification token
+    # Send verification email to handler
+    handler_email = handler.get("email")
+    verification_link = f"https://expertrait.com/verify-bank-account/{pending_update['verification_token']}"
+    
+    email_body = f"""
+    <h2>Bank Account Verification</h2>
+    <p>Hello {handler.get('name')},</p>
+    <p>You have requested to update your bank account details:</p>
+    <ul>
+        <li>Account Holder: {request.bank_account.account_holder_name}</li>
+        <li>Bank: {request.bank_account.bank_name}</li>
+        <li>Account Number: ****{request.bank_account.account_number[-4:]}</li>
+    </ul>
+    <p>Please click the link below to confirm this change:</p>
+    <p><a href="{verification_link}">Verify Bank Account Update</a></p>
+    <p>This link will expire in 24 hours.</p>
+    <p>If you did not request this change, please ignore this email.</p>
+    """
+    
+    await send_verification_email(
+        to_email=handler_email,
+        subject="Verify Your Bank Account Update - ExperTrait",
+        body=email_body
+    )
     
     return {
         "message": "Verification email sent. Please check your email to confirm the bank account update.",
