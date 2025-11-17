@@ -458,6 +458,35 @@ async def create_bulk_bookings(bulk_booking: BulkBookingCreate):
         created_booking = await db.bookings.find_one({"_id": result.inserted_id})
         created_bookings.append(serialize_doc(created_booking))
     
+    # Check for handler availability and send admin alert if no match found
+    for booking in created_bookings:
+        if not booking.get("handler_id"):
+            # Try to find available handlers
+            category = booking.get("service_category")
+            available_handlers = await db.users.find({
+                "user_type": "handler",
+                "skills": category,
+                "available": True
+            }).to_list(10)
+            
+            if len(available_handlers) == 0:
+                # No handlers found - send admin alert
+                customer_name = customer.get("name", "Unknown")
+                await send_admin_alert_email(
+                    subject=f"⚠️ Unmatched Booking Alert - No Handler Available",
+                    body=f"""
+                    Booking ID: {booking['id']}
+                    Customer: {customer_name}
+                    Service: {booking['service_name']}
+                    Category: {category}
+                    Date: {booking['scheduled_date']}
+                    Time: {booking['time_range_start']} - {booking['time_range_end']}
+                    
+                    No available handlers found for this booking.
+                    Please assign manually from the admin dashboard.
+                    """
+                )
+    
     return {
         "message": f"Created {len(created_bookings)} booking(s) grouped by category",
         "bookings": created_bookings,
