@@ -16,6 +16,45 @@ export default function ProfilePro() {
   const { user, logout } = useAuth();
   const router = useRouter();
 
+  const handleDeleteAccount = () => {
+    Alert.prompt(
+      'Delete Account',
+      'This action cannot be undone. Please enter your password to confirm:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async (password) => {
+            if (!password) {
+              Alert.alert('Error', 'Password is required');
+              return;
+            }
+
+            try {
+              const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+              const response = await fetch(`${API_URL}/api/user/${user?.id}/account?password=${password}`, {
+                method: 'DELETE',
+              });
+
+              if (response.ok) {
+                Alert.alert('Account Deleted', 'Your account has been deleted successfully');
+                await logout();
+                router.replace('/');
+              } else {
+                const error = await response.json();
+                Alert.alert('Error', error.detail || 'Failed to delete account');
+              }
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete account');
+            }
+          },
+        },
+      ],
+      'secure-text'
+    );
+  };
+
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
