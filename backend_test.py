@@ -78,12 +78,13 @@ class PartnerAPITester:
     
     def test_partner_registration_success(self):
         """Test successful partner registration with all required fields"""
+        timestamp = int(time.time())
         partner_data = {
             "name": "Dr. Sarah Johnson",
-            "email": "sarah.johnson@healthcareplus.com",
+            "email": f"sarah.johnson.{timestamp}@healthcareplus.com",
             "password": "SecurePass123!",
             "organization_name": "HealthCare Plus Ltd",
-            "license_number": "HC-2024-001",
+            "license_number": f"HC-2024-{timestamp}",
             "phone": "+44 20 7946 0958",
             "address": "123 Healthcare Street, London, UK",
             "healthcare_category": "Mental Support Worker"
