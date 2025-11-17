@@ -163,6 +163,30 @@ export default function ServiceDetail() {
             </View>
           </View>
 
+          {service.included_items && service.included_items.length > 0 && (
+            <View style={styles.requirementsSection}>
+              <Text style={styles.sectionTitle}>✓ What's Included:</Text>
+              {service.included_items.map((item, index) => (
+                <View key={index} style={styles.requirementItem}>
+                  <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                  <Text style={styles.requirementText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {service.excluded_items && service.excluded_items.length > 0 && (
+            <View style={styles.requirementsSection}>
+              <Text style={styles.sectionTitleExcluded}>✗ Not Included:</Text>
+              {service.excluded_items.map((item, index) => (
+                <View key={index} style={styles.requirementItem}>
+                  <Ionicons name="close-circle" size={20} color="#D32F2F" />
+                  <Text style={styles.excludedText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           {service.requirements && service.requirements.length > 0 && (
             <View style={styles.requirementsSection}>
               <Text style={styles.sectionTitle}>What you need:</Text>
