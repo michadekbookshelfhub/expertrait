@@ -60,8 +60,8 @@ export default function Home() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    "name": "Expertrait",
-    "description": "Professional home services at your doorstep. Connect with verified, skilled professionals for all your home and personal care needs.",
+    "name": "ExperTrait",
+    "description": "Professional home services and healthcare services marketplace. Connect with verified professionals for plumbing, electrical, carpentry, cleaning, and licensed healthcare services including baby sitting, dog sitting, and care work.",
     "url": "https://apps.expertrait.com",
     "telephone": "+447362388505",
     "email": "support@expertrait.com",
@@ -85,9 +85,9 @@ export default function Home() {
     "openingHoursSpecification": [
       {
         "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        "opens": "09:00",
-        "closes": "18:00"
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        "opens": "00:00",
+        "closes": "23:59"
       }
     ],
     "sameAs": [
@@ -100,6 +100,34 @@ export default function Home() {
       "@type": "AggregateRating",
       "ratingValue": "4.9",
       "reviewCount": "1200"
+    },
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Home & Healthcare Services",
+      "itemListElement": [
+        {
+          "@type": "OfferCatalog",
+          "name": "Home Maintenance Services",
+          "itemListElement": [
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Plumbing" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Electrical Work" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Carpentry" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Painting" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Cleaning" } }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Healthcare Services (via Licensed Partners)",
+          "itemListElement": [
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Baby Sitting" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Dog Sitting" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Mental Support Work" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Domiciliary Care" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Support Work (Sit-in)" } }
+          ]
+        }
+      ]
     }
   };
 
