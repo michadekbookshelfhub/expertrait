@@ -30,7 +30,23 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookingData),
     });
-    if (!response.ok) throw new Error('Failed to create booking');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create booking');
+    }
+    return response.json();
+  },
+
+  createBulkBooking: async (bookingData: any) => {
+    const response = await fetch(`${API_URL}/api/bookings/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bookingData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create bookings');
+    }
     return response.json();
   },
 
