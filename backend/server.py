@@ -174,6 +174,7 @@ class UserCreate(BaseModel):
     phone: str
     address: Optional[str] = None
     user_type: str = "customer"  # "customer" or "handler"
+    skills: Optional[List[str]] = []  # For handlers - list of service categories they can handle
 
 class UserResponse(BaseModel):
     id: str
