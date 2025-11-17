@@ -28,6 +28,23 @@ export default function Index() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [userType, setUserType] = useState<'customer' | 'professional'>('customer');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+
+  // Available service categories for professionals
+  const serviceCategories = [
+    'Cleaning', 'Plumbing', 'Electrical', 'Painting', 'Gardening',
+    'Carpentry', 'HVAC', 'Appliance Repair', 'Moving', 'Pet Care',
+    'Baby Sitter', 'Dog Sitter', 'Mental Support Worker', 
+    'Domiciliary Care Worker', 'Support Worker (Sit-in)'
+  ];
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills(prev => 
+      prev.includes(skill) 
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    );
+  };
 
   useEffect(() => {
     if (!loading && user) {
