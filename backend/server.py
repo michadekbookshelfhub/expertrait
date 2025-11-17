@@ -381,6 +381,11 @@ async def register_user(user: UserCreate):
         user_dict["total_jobs"] = 0
         user_dict["available"] = True
         user_dict["location"] = None
+        # Save skills for handlers
+        user_dict["skills"] = user.skills if user.skills else []
+    else:
+        # Customers don't need skills
+        user_dict.pop("skills", None)
     
     result = await db.users.insert_one(user_dict)
     created_user = await db.users.find_one({"_id": result.inserted_id})
