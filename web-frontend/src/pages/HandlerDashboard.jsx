@@ -1,5 +1,4 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, DollarSign, Star, User, Smartphone, AlertCircle } from "lucide-react";
