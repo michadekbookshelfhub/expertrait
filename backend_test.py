@@ -482,8 +482,9 @@ class PartnerAPITester:
         handler_id = reg_response["id"]
         partner_id = self.created_partners[0]["id"]
         assignment_data = {
+            "handler_id": handler_id,
             "partner_id": partner_id,
-            "assignment_notes": "Attempting to assign non-healthcare handler"
+            "admin_notes": "Attempting to assign non-healthcare handler"
         }
         
         success, response, status_code = self.make_request(
