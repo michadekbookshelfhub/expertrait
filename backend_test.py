@@ -387,9 +387,10 @@ class PartnerAPITester:
 
     def create_test_handler_with_healthcare_skills(self):
         """Create a test handler with healthcare skills for assignment tests"""
+        timestamp = int(time.time())
         handler_data = {
             "name": "Healthcare Handler",
-            "email": "healthcare.handler@test.com",
+            "email": f"healthcare.handler.{timestamp}@test.com",
             "password": "HandlerPass123!",
             "phone": "+44 20 7946 0962",
             "user_type": "handler",
