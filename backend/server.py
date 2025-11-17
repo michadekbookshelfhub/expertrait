@@ -33,6 +33,23 @@ SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@expertrait.com')
 FROM_EMAIL = os.environ.get('FROM_EMAIL', 'noreply@expertrait.com')
 
+# Stripe Connect Keys
+STRIPE_TEST_SECRET_KEY = os.environ.get('STRIPE_TEST_SECRET_KEY')
+STRIPE_TEST_PUBLISHABLE_KEY = os.environ.get('STRIPE_TEST_PUBLISHABLE_KEY')
+STRIPE_LIVE_SECRET_KEY = os.environ.get('STRIPE_LIVE_SECRET_KEY')
+STRIPE_LIVE_PUBLISHABLE_KEY = os.environ.get('STRIPE_LIVE_PUBLISHABLE_KEY')
+
+# Helper function to get active Stripe key
+async def get_stripe_key():
+    """Get the active Stripe secret key based on company settings"""
+    settings = await db.company_settings.find_one()
+    use_live_stripe = settings.get("use_live_stripe", False) if settings else False
+    
+    if use_live_stripe:
+        return STRIPE_LIVE_SECRET_KEY, STRIPE_LIVE_PUBLISHABLE_KEY
+    else:
+        return STRIPE_TEST_SECRET_KEY, STRIPE_TEST_PUBLISHABLE_KEY
+
 # Email helper function using SendGrid
 async def send_admin_alert_email(subject: str, body: str):
     """Send alert email to admin using SendGrid"""
