@@ -165,6 +165,11 @@ export default function Profile() {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={24} color="#D32F2F" />
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
+        </TouchableOpacity>
+
         <Text style={styles.version}>Version 1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
