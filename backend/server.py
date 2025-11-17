@@ -2090,12 +2090,14 @@ class PartnerCreate(BaseModel):
 
 class PartnerResponse(BaseModel):
     id: str
-    name: str
+    representative_full_name: str
+    representative_phone: str
+    representative_job_role: str
     email: str
     organization_name: str
+    company_phone: Optional[str] = None
+    company_address: str
     license_number: str
-    phone: str
-    address: str
     healthcare_category: str
     status: str  # "pending", "approved", "rejected", "suspended"
     handler_count: int = 0
