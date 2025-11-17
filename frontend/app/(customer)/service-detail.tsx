@@ -25,6 +25,8 @@ interface Service {
   estimated_duration: number;
   requirements?: string[];
   image_base64?: string;
+  included_items?: string[];
+  excluded_items?: string[];
 }
 
 export default function ServiceDetail() {
