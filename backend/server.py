@@ -2044,6 +2044,39 @@ class TermsAndPolicy(BaseModel):
     privacy_policy: str
     cancellation_policy: Optional[str] = None
 
+class PartnerCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    organization_name: str
+    license_number: str
+    license_document: Optional[str] = None  # Base64 encoded
+    phone: str
+    address: str
+    healthcare_category: str  # "Baby Sitter", "Dog Sitter", "Mental Support", "Domiciliary Care", "Support Worker"
+
+class PartnerResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    organization_name: str
+    license_number: str
+    phone: str
+    address: str
+    healthcare_category: str
+    status: str  # "pending", "approved", "rejected", "suspended"
+    handler_count: int = 0
+    created_at: datetime
+
+class PartnerLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class HandlerPartnerAssignment(BaseModel):
+    handler_id: str
+    partner_id: str
+    admin_notes: Optional[str] = None
+
 # Manual Booking Assignment
 @api_router.post("/admin/bookings/{booking_id}/assign")
 async def admin_assign_booking(booking_id: str, assignment: ManualBookingAssignment):
