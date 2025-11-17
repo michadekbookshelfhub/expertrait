@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Tests for ExperTrait Home Services
-Tests all endpoints including new Admin APIs with realistic data and proper error handling
+Comprehensive Partner System API Testing for ExperTrait Healthcare Platform
+Testing Partner Registration, Authentication, Admin Management, and Data Access APIs
 """
 
-import asyncio
-import aiohttp
+import requests
 import json
-from datetime import datetime, timedelta
+import time
+from datetime import datetime
 from typing import Dict, Any, Optional
-import sys
-import os
 
-# Backend URL from environment
-BACKEND_URL = "https://ondemand-care.preview.emergentagent.com/api"
-
-# Test credentials
-ADMIN_CREDENTIALS = {
-    "email": "testadmin@test.com",
-    "password": "testpass123"
-}
+# Configuration
+BASE_URL = "https://ondemand-care.preview.emergentagent.com/api"
+HEALTHCARE_CATEGORIES = [
+    "Baby Sitter",
+    "Dog Sitter", 
+    "Mental Support Worker",
+    "Domiciliary Care Worker",
+    "Support Worker (Sit-in)"
+]
 
 class APITester:
     def __init__(self):
