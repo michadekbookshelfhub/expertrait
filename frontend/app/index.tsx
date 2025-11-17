@@ -218,6 +218,39 @@ export default function Index() {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {userType === 'professional' && (
+                <View style={styles.skillsContainer}>
+                  <Text style={styles.inputLabel}>Skills & Services</Text>
+                  <Text style={styles.helperText}>Select the services you can provide (select at least one)</Text>
+                  <View style={styles.skillsGrid}>
+                    {serviceCategories.map((skill) => (
+                      <TouchableOpacity
+                        key={skill}
+                        style={[
+                          styles.skillChip,
+                          selectedSkills.includes(skill) && styles.skillChipActive,
+                        ]}
+                        onPress={() => toggleSkill(skill)}
+                      >
+                        <Text
+                          style={[
+                            styles.skillChipText,
+                            selectedSkills.includes(skill) && styles.skillChipTextActive,
+                          ]}
+                        >
+                          {skill}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {selectedSkills.length > 0 && (
+                    <Text style={styles.selectedCountText}>
+                      {selectedSkills.length} skill{selectedSkills.length !== 1 ? 's' : ''} selected
+                    </Text>
+                  )}
+                </View>
+              )}
             </>
           )}
 
