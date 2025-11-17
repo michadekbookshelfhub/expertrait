@@ -28,18 +28,67 @@ db = client[os.environ['DB_NAME']]
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@expertrait.com')
+FROM_EMAIL = os.environ.get('FROM_EMAIL', 'noreply@expertrait.com')
 
-# Email helper function (stub - replace with actual email service)
+# Email helper function using SendGrid
 async def send_admin_alert_email(subject: str, body: str):
-    """Send alert email to admin - stub implementation"""
-    # TODO: Integrate with SendGrid, AWS SES, or other email service
-    print(f"📧 ADMIN ALERT EMAIL")
-    print(f"To: {ADMIN_EMAIL}")
-    print(f"Subject: {subject}")
-    print(f"Body: {body}")
-    # In production, use an actual email service
-    return True
+    """Send alert email to admin using SendGrid"""
+    if not SENDGRID_API_KEY:
+        print(f"📧 ADMIN ALERT EMAIL (SendGrid not configured)")
+        print(f"To: {ADMIN_EMAIL}")
+        print(f"Subject: {subject}")
+        print(f"Body: {body}")
+        return True
+    
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
+        
+        message = Mail(
+            from_email=FROM_EMAIL,
+            to_emails=ADMIN_EMAIL,
+            subject=subject,
+            html_content=body.replace('\n', '<br>')
+        )
+        
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        
+        print(f"📧 Email sent successfully to {ADMIN_EMAIL}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send email: {str(e)}")
+        return False
+
+async def send_verification_email(to_email: str, subject: str, body: str):
+    """Send verification email using SendGrid"""
+    if not SENDGRID_API_KEY:
+        print(f"📧 VERIFICATION EMAIL (SendGrid not configured)")
+        print(f"To: {to_email}")
+        print(f"Subject: {subject}")
+        return True
+    
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
+        
+        message = Mail(
+            from_email=FROM_EMAIL,
+            to_emails=to_email,
+            subject=subject,
+            html_content=body.replace('\n', '<br>')
+        )
+        
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        
+        print(f"📧 Verification email sent to {to_email}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send verification email: {str(e)}")
+        return False
 
 # Create the main app
 app = FastAPI(title="Oscar Home Services API")
