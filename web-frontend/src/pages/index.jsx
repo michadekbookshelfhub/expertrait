@@ -24,9 +24,9 @@ import SitemapXML from "./SitemapXML";
 
 import DownloadApp from "./DownloadApp";
 
-import UserDashboard from "./UserDashboard";
+import UserDashboard from "./UserDashboardNew";
 
-import HandlerDashboard from "./HandlerDashboard";
+import HandlerDashboard from "./HandlerDashboardNew";
 
 import Admin from "./Admin";
 
