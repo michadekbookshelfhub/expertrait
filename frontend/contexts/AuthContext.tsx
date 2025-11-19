@@ -77,6 +77,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await AsyncStorage.setItem('@user', JSON.stringify(data.user));
   };
 
+  const partnerLogin = async (email: string, password: string) => {
+    const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+    const response = await fetch(`${API_URL}/api/partner/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Login failed');
+    }
+
+    const data = await response.json();
+    // Transform partner data to match User interface
+    const partnerUser = {
+      id: data.id,
+      name: data.representative_full_name,
+      email: data.email,
+      phone: data.company_phone,
+      user_type: 'partner' as const,
+      organization_name: data.organization_name,
+      representative_full_name: data.representative_full_name,
+      healthcare_category: data.healthcare_category,
+      status: data.status
+    };
+    setUser(partnerUser);
+    await AsyncStorage.setItem('@user', JSON.stringify(partnerUser));
+  };
+
   const register = async (userData: any) => {
     const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
     const response = await fetch(`${API_URL}/api/auth/register`, {
