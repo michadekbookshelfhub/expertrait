@@ -2263,6 +2263,25 @@ class StripePayoutRequest(BaseModel):
 class StripeSettingsUpdate(BaseModel):
     use_live_stripe: bool
 
+# App Settings Models
+class AppSettingsUpdate(BaseModel):
+    app_name: Optional[str] = None
+    app_logo_url: Optional[str] = None
+    customer_privacy_policy: Optional[str] = None
+    customer_terms_of_use: Optional[str] = None
+    handler_privacy_policy: Optional[str] = None
+    handler_terms_of_use: Optional[str] = None
+    partner_privacy_policy: Optional[str] = None
+    partner_terms_of_use: Optional[str] = None
+
+# Email Models
+class EmailSendRequest(BaseModel):
+    recipient_type: str  # "user", "handler", "partner", "individual"
+    recipient_id: Optional[str] = None  # For individual emails
+    subject: str
+    body: str
+    send_to_all: bool = False
+
 # Manual Booking Assignment
 @api_router.post("/admin/bookings/{booking_id}/assign")
 async def admin_assign_booking(booking_id: str, assignment: ManualBookingAssignment):
