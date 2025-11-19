@@ -176,29 +176,6 @@ export default function ProfilePro() {
             <Ionicons name="chevron-forward" size={24} color="#CCC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/handler-terms')}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="document-text-outline"
-                size={24}
-                color="#4CAF50"
-              />
-              <Text style={styles.menuItemText}>Terms of Use</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#CCC" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(professional)/handler-privacy')}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={24}
-                color="#4CAF50"
-              />
-              <Text style={styles.menuItemText}>Privacy Policy</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#CCC" />
-          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
