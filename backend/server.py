@@ -3795,6 +3795,56 @@ async def get_email_logs(limit: int = 50):
 
 app.include_router(api_router)
 
+# Photo Upload
+class PhotoUpload(BaseModel):
+    booking_id: str
+    photo_data: str  # base64 encoded image
+    photo_type: str  # "before" or "after"
+    description: Optional[str] = None
+
+@api_router.post("/bookings/{booking_id}/photos")
+async def upload_booking_photo(booking_id: str, photo: PhotoUpload):
+    """Upload a photo for a booking"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    # Store photo data in booking document
+    result = await db.bookings.update_one(
+        {"_id": ObjectId(booking_id)},
+        {
+            "$push": {
+                "photos": {
+                    "id": str(ObjectId()),
+                    "photo_data": photo.photo_data,
+                    "photo_type": photo.photo_type,
+                    "description": photo.description,
+                    "uploaded_at": datetime.utcnow().isoformat()
+                }
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    return {"message": "Photo uploaded successfully"}
+
+@api_router.get("/bookings/{booking_id}/photos")
+async def get_booking_photos(booking_id: str):
+    """Get all photos for a booking"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    booking = await db.bookings.find_one(
+        {"_id": ObjectId(booking_id)},
+        {"photos": 1}
+    )
+    
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    return {"photos": booking.get("photos", [])}
+
 # Serve landing page
 @app.get("/", response_class=HTMLResponse)
 async def landing_page():
