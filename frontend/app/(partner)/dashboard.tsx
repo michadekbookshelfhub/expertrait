@@ -1,29 +1,80 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function PartnerDashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/');
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+      
+      // Load handlers count
+      const handlersResponse = await fetch(`${API_URL}/api/partner/${user?.id}/handlers`);
+      const handlersData = await handlersResponse.json();
+      
+      // Load bookings count
+      const bookingsResponse = await fetch(`${API_URL}/api/partner/${user?.id}/bookings`);
+      const bookingsData = await bookingsResponse.json();
+      
+      setStats({
+        totalWorkers: handlersData.handlers?.length || 0,
+        totalBookings: bookingsData.bookings?.length || 0,
+        activeBookings: bookingsData.bookings?.filter((b: any) => b.status === 'in_progress').length || 0,
+        completedBookings: bookingsData.bookings?.filter((b: any) => b.status === 'completed').length || 0,
+      });
+    } catch (error) {
+      console.error('Error loading partner data:', error);
+      // Set default values on error
+      setStats({
+        totalWorkers: 0,
+        totalBookings: 0,
+        activeBookings: 0,
+        completedBookings: 0,
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0EA5E9" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0EA5E9" />
+      }
+    >
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Partner Dashboard</Text>
-          <Text style={styles.headerSubtitle}>{user?.organization_name || 'Healthcare Organization'}</Text>
-          <Text style={styles.headerEmail}>{user?.email}</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.greeting}>Welcome back,</Text>
+          <Text style={styles.organizationName}>{user?.organization_name || 'Healthcare Partner'}</Text>
+          <Text style={styles.categoryBadge}>{user?.healthcare_category || 'Healthcare Services'}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={24} color="#FF6B00" />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.card}>
