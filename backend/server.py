@@ -51,14 +51,16 @@ async def get_stripe_key():
         return STRIPE_TEST_SECRET_KEY, STRIPE_TEST_PUBLISHABLE_KEY
 
 # Email helper function using SendGrid
-async def send_admin_alert_email(subject: str, body: str):
-    """Send alert email to admin using SendGrid"""
+async def send_admin_alert_email(subject: str, body: str, to_email: Optional[str] = None):
+    """Send alert email using SendGrid"""
+    recipient = to_email if to_email else ADMIN_EMAIL
+    
     if not SENDGRID_API_KEY:
-        print(f"📧 ADMIN ALERT EMAIL (SendGrid not configured)")
-        print(f"To: {ADMIN_EMAIL}")
+        print(f"📧 EMAIL (SendGrid not configured)")
+        print(f"To: {recipient}")
         print(f"Subject: {subject}")
-        print(f"Body: {body}")
-        return True
+        print(f"Body: {body[:100]}...")
+        return
     
     try:
         from sendgrid import SendGridAPIClient
@@ -66,19 +68,17 @@ async def send_admin_alert_email(subject: str, body: str):
         
         message = Mail(
             from_email=FROM_EMAIL,
-            to_emails=ADMIN_EMAIL,
+            to_emails=recipient,
             subject=subject,
-            html_content=body.replace('\n', '<br>')
+            html_content=body
         )
         
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
-        
-        print(f"📧 Email sent successfully to {ADMIN_EMAIL}")
-        return True
+        print(f"✅ Email sent to {recipient}: {response.status_code}")
     except Exception as e:
-        print(f"❌ Failed to send email: {str(e)}")
-        return False
+        print(f"❌ Failed to send email to {recipient}: {e}")
+        raise
 
 async def send_verification_email(to_email: str, subject: str, body: str):
     """Send verification email using SendGrid"""
