@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderColor: '#4CAF50',
   },
   filterText: {
-    fontSize: 15,
+    fontSize: 12,
     color: '#333',
     textTransform: 'capitalize',
     fontWeight: '600',
