@@ -294,4 +294,28 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 32,
   },
+  browseAllContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  browseAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF6B00',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  browseAllText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
 });
