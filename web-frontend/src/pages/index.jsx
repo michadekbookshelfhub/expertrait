@@ -30,6 +30,8 @@ import HandlerDashboard from "./HandlerDashboard";
 
 import Admin from "./Admin";
 
+import AdminNew from "./AdminNew";
+
 import PartnerLogin from "./PartnerLogin";
 
 import PartnerDashboard from "./PartnerDashboard";
