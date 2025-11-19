@@ -158,125 +158,134 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F3F4F6',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
+  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     padding: 20,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  headerTitle: {
+  headerContent: {
+    marginBottom: 8,
+  },
+  greeting: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  organizationName: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#111827',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
     marginTop: 4,
   },
-  headerEmail: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 2,
+  categoryBadge: {
+    fontSize: 13,
+    color: '#0EA5E9',
+    marginTop: 4,
+    fontWeight: '500',
   },
-  logoutButton: {
-    padding: 8,
+  statsContainer: {
+    padding: 16,
   },
-  card: {
-    margin: 20,
-    padding: 24,
-    backgroundColor: '#FFF',
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    padding: 20,
     borderRadius: 12,
+    marginHorizontal: 6,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  welcomeTitle: {
-    fontSize: 20,
+  statValue: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
-    marginTop: 16,
-    textAlign: 'center',
+    marginTop: 8,
   },
-  welcomeText: {
-    fontSize: 16,
+  statLabel: {
+    fontSize: 12,
     color: '#6B7280',
-    marginTop: 12,
+    marginTop: 4,
     textAlign: 'center',
   },
-  statusText: {
-    fontWeight: 'bold',
-    color: '#F59E0B',
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 12,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  featuresContainer: {
-    paddingHorizontal: 20,
+  quickActions: {
+    paddingHorizontal: 16,
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 16,
-  },
-  featureCard: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
     marginBottom: 12,
+  },
+  actionCard: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
   },
-  featureContent: {
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionContent: {
     flex: 1,
     marginLeft: 16,
   },
-  featureTitle: {
-    fontSize: 16,
+  actionTitle: {
+    fontSize: 15,
     fontWeight: '600',
     color: '#111827',
   },
-  featureDesc: {
-    fontSize: 14,
+  actionDesc: {
+    fontSize: 13,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 2,
   },
-  supportCard: {
-    margin: 20,
-    marginTop: 32,
+  infoCard: {
+    margin: 16,
+    marginTop: 24,
     padding: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#EFF6FF',
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#DBEAFE',
   },
-  supportTitle: {
-    fontSize: 18,
+  infoTitle: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#111827',
     marginTop: 12,
   },
-  supportText: {
-    fontSize: 14,
+  infoText: {
+    fontSize: 13,
     color: '#6B7280',
     marginTop: 8,
     textAlign: 'center',
+    lineHeight: 18,
   },
 });
