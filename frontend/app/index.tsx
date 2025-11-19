@@ -85,7 +85,12 @@ export default function Index() {
       }
       setIsLoading(true);
       try {
-        await login(email, password);
+        // Use partner login for partners, regular login for others
+        if (userType === 'partner') {
+          await partnerLogin(email, password);
+        } else {
+          await login(email, password);
+        }
       } catch (error: any) {
         Alert.alert('Login Failed', error.message);
       } finally {
@@ -102,19 +107,43 @@ export default function Index() {
         Alert.alert('Error', 'Please select at least one skill/service you can provide');
         return;
       }
+
+      // Validate partner fields
+      if (userType === 'partner') {
+        if (!organizationName || !companyPhone || !companyAddress || !licenseNumber || 
+            !healthcareCategory || !representativeName || !representativeAddress || !representativeJobRole) {
+          Alert.alert('Error', 'Please fill in all required partner fields');
+          return;
+        }
+      }
       
       setIsLoading(true);
       try {
-        await register({
-          name,
-          email,
-          password,
-          phone,
-          user_type: userType,
-          skills: userType === 'professional' ? selectedSkills : [],
-        });
+        if (userType === 'partner') {
+          await partnerRegister({
+            email,
+            password,
+            organization_name: organizationName,
+            company_phone: companyPhone,
+            company_address: companyAddress,
+            healthcare_license_number: licenseNumber,
+            healthcare_category: healthcareCategory,
+            representative_full_name: representativeName,
+            representative_address: representativeAddress,
+            representative_job_role: representativeJobRole
+          });
+        } else {
+          await register({
+            name,
+            email,
+            password,
+            phone,
+            user_type: userType,
+            skills: userType === 'professional' ? selectedSkills : [],
+          });
+        }
       } catch (error: any) {
-        Alert.alert('Registration Failed', error.message);
+        Alert.alert('Registration Status', error.message);
       } finally {
         setIsLoading(false);
       }
