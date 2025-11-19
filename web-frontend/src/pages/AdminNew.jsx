@@ -21,8 +21,8 @@ export default function AdminNew() {
   const loadStats = async () => {
     setLoading(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${API_URL}/api/admin/stats`);
+      // Use relative URL since we're on the same domain
+      const response = await fetch('/api/admin/stats');
       const data = await response.json();
       setStats(data);
     } catch (error) {
