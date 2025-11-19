@@ -236,6 +236,30 @@ export default function Index() {
                       Offer services
                     </Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.userTypeButton,
+                      userType === 'partner' && styles.userTypeButtonActive,
+                    ]}
+                    onPress={() => setUserType('partner')}
+                  >
+                    <Ionicons 
+                      name="business" 
+                      size={24} 
+                      color={userType === 'partner' ? '#FF6B00' : '#999'} 
+                    />
+                    <Text
+                      style={[
+                        styles.userTypeText,
+                        userType === 'partner' && styles.userTypeTextActive,
+                      ]}
+                    >
+                      Partner
+                    </Text>
+                    <Text style={styles.userTypeDesc}>
+                      Healthcare org
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
