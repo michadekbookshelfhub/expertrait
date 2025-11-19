@@ -36,6 +36,26 @@ export default function HandlerReviewsScreen() {
     }
   };
 
+  const applyFiltersAndSort = () => {
+    let filtered = [...reviews];
+
+    // Filter by rating
+    if (filterRating > 0) {
+      filtered = filtered.filter(review => review.rating === filterRating);
+    }
+
+    // Sort
+    if (sortBy === 'recent') {
+      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sortBy === 'highest') {
+      filtered.sort((a, b) => b.rating - a.rating);
+    } else if (sortBy === 'lowest') {
+      filtered.sort((a, b) => a.rating - b.rating);
+    }
+
+    setFilteredReviews(filtered);
+  };
+
   const renderStars = (rating: number) => {
     return (
       <View style={styles.starsContainer}>
