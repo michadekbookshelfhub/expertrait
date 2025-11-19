@@ -642,8 +642,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Partner Login Page"
-    - "Partner Dashboard Page"
+    - "Search and Advanced Search Integration"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
