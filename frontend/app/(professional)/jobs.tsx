@@ -225,17 +225,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#FFF',
     marginRight: 8,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#E0E0E0',
   },
   filterChipActive: {
-    backgroundColor: '#FF6B00',
-    borderColor: '#FF6B00',
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
   },
   filterText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#333',
     textTransform: 'capitalize',
+    fontWeight: '600',
   },
   filterTextActive: {
     color: '#FFF',
