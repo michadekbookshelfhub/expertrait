@@ -69,8 +69,8 @@ export default function AdminNew() {
   const StatCard = ({ title, value, change, changeType, icon: Icon, color }) => (
     <div className="bg-white rounded-lg shadow-md p-6 border-l-4" style={{ borderLeftColor: color }}>
       <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg bg-${color}-50`}>
-          <Icon className={`w-6 h-6 text-${color}-600`} style={{ color }} />
+        <div className="p-3 rounded-lg" style={{ backgroundColor: color + '20' }}>
+          <Icon className="w-6 h-6" style={{ color }} />
         </div>
         {change && (
           <div className={`flex items-center text-sm ${changeType === 'up' ? 'text-green-600' : 'text-red-600'}`}>
