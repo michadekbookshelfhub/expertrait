@@ -105,6 +105,8 @@ function PagesContent() {
             <Route path="/admin-dashboard" element={<AdminNew />} />
             <Route path="/partner-login" element={<PartnerLogin />} />
             <Route path="/partner-dashboard" element={<PartnerDashboard />} />
+            <Route path="/user-dashboard" element={<UserDashboard />} />
+            <Route path="/handler-dashboard" element={<HandlerDashboard />} />
             
             {/* Pages with Layout */}
             <Route path="/" element={<WithLayout><Home /></WithLayout>} />
@@ -120,8 +122,6 @@ function PagesContent() {
             <Route path="/Sitemap" element={<WithLayout><Sitemap /></WithLayout>} />
             <Route path="/SitemapXML" element={<WithLayout><SitemapXML /></WithLayout>} />
             <Route path="/DownloadApp" element={<WithLayout><DownloadApp /></WithLayout>} />
-            <Route path="/UserDashboard" element={<WithLayout><UserDashboard /></WithLayout>} />
-            <Route path="/HandlerDashboard" element={<WithLayout><HandlerDashboard /></WithLayout>} />
         </Routes>
     );
 }
