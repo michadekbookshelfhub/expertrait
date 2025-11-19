@@ -6,11 +6,16 @@ interface User {
   name: string;
   email: string;
   phone: string;
-  user_type: 'customer' | 'professional';
+  user_type: 'customer' | 'professional' | 'partner';
   address?: string;
   skills?: string[];
   rating?: number;
   available?: boolean;
+  // Partner-specific fields
+  organization_name?: string;
+  representative_full_name?: string;
+  healthcare_category?: string;
+  status?: string;
 }
 
 interface AuthContextType {
