@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """
-Admin Dashboard Backend API Testing
-Testing specific Admin Dashboard APIs as requested:
-1. App Settings API (Priority: HIGH)
-2. Chat History API (Priority: MEDIUM) 
-3. Send Email API (Priority: HIGH)
+Backend API Testing for Search and Advanced Search Integration
+ExperTrait Mobile App - Testing Agent
+
+This script tests the backend APIs required for the mobile app's search and advanced search functionality.
 """
 
 import requests
 import json
 import sys
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-# Backend URL from environment
+# Configuration
 BACKEND_URL = "https://homeservices-app.preview.emergentagent.com/api"
+TIMEOUT = 30
 
-class AdminDashboardTester:
+class SearchAPITester:
     def __init__(self):
         self.session = requests.Session()
         self.test_results = []
