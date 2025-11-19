@@ -38,7 +38,7 @@ export default function AdvancedSearchScreen() {
   const params = useLocalSearchParams();
   
   // Search & Results
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState((params.query as string) || '');
   const [services, setServices] = useState<Service[]>([]);
   const [handlers, setHandlers] = useState<Handler[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
