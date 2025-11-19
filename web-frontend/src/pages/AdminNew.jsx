@@ -344,6 +344,282 @@ export default function AdminNew() {
     );
   };
 
+  const AppSettingsContent = () => {
+    const [settings, setSettings] = useState({});
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+      loadSettings();
+    }, []);
+
+    const loadSettings = async () => {
+      try {
+        const response = await fetch('/api/admin/app-settings');
+        const data = await response.json();
+        setSettings(data);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+
+    const handleSave = async () => {
+      setSaving(true);
+      try {
+        const response = await fetch('/api/admin/app-settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings)
+        });
+        alert('Settings saved successfully!');
+      } catch (error) {
+        alert('Failed to save settings');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-bold mb-4">App Branding</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">App Name</label>
+              <input
+                type="text"
+                value={settings.app_name || ''}
+                onChange={(e) => setSettings({...settings, app_name: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">App Logo URL</label>
+              <input
+                type="text"
+                value={settings.app_logo_url || ''}
+                onChange={(e) => setSettings({...settings, app_logo_url: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-bold mb-4">Customer Policies</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Privacy Policy</label>
+              <textarea
+                value={settings.customer_privacy_policy || ''}
+                onChange={(e) => setSettings({...settings, customer_privacy_policy: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2 h-32"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Terms of Use</label>
+              <textarea
+                value={settings.customer_terms_of_use || ''}
+                onChange={(e) => setSettings({...settings, customer_terms_of_use: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2 h-32"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-bold mb-4">Handler Policies</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Privacy Policy</label>
+              <textarea
+                value={settings.handler_privacy_policy || ''}
+                onChange={(e) => setSettings({...settings, handler_privacy_policy: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2 h-32"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Terms of Use</label>
+              <textarea
+                value={settings.handler_terms_of_use || ''}
+                onChange={(e) => setSettings({...settings, handler_terms_of_use: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2 h-32"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-bold mb-4">Partner Policies</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Privacy Policy</label>
+              <textarea
+                value={settings.partner_privacy_policy || ''}
+                onChange={(e) => setSettings({...settings, partner_privacy_policy: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2 h-32"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Terms of Use</label>
+              <textarea
+                value={settings.partner_terms_of_use || ''}
+                onChange={(e) => setSettings({...settings, partner_terms_of_use: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2 h-32"
+              />
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+    );
+  };
+
+  const ChatHistoryContent = () => {
+    const [chats, setChats] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      loadChats();
+    }, []);
+
+    const loadChats = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/admin/chat-history?limit=50');
+        const data = await response.json();
+        setChats(data.chats || []);
+      } catch (error) {
+        console.error('Error loading chats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (loading) {
+      return <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div></div>;
+    }
+
+    return (
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b">
+          <h3 className="text-lg font-bold">Chat History</h3>
+          <p className="text-sm text-gray-600">View all chat messages between customers and handlers</p>
+        </div>
+        <div className="divide-y max-h-screen overflow-y-auto">
+          {chats.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">No chat messages found</div>
+          ) : (
+            chats.map((chat) => (
+              <div key={chat.id} className="p-4 hover:bg-gray-50">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <span className="font-medium">{chat.sender_details?.name}</span>
+                    <span className="text-sm text-gray-500 ml-2">({chat.sender_details?.user_type})</span>
+                  </div>
+                  <span className="text-xs text-gray-500">{new Date(chat.created_at).toLocaleString()}</span>
+                </div>
+                <p className="text-gray-700">{chat.message}</p>
+                {chat.booking_details && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Booking ID: {chat.booking_id}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const SendEmailContent = () => {
+    const [emailData, setEmailData] = useState({
+      recipient_type: 'user',
+      subject: '',
+      body: '',
+      send_to_all: true
+    });
+    const [sending, setSending] = useState(false);
+
+    const handleSend = async () => {
+      if (!emailData.subject || !emailData.body) {
+        alert('Please fill in subject and body');
+        return;
+      }
+
+      setSending(true);
+      try {
+        const response = await fetch('/api/admin/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailData)
+        });
+        const data = await response.json();
+        alert(`Email sent to ${data.sent_count} recipients!`);
+        setEmailData({...emailData, subject: '', body: ''});
+      } catch (error) {
+        alert('Failed to send email');
+      } finally {
+        setSending(false);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-bold mb-4">Send Email</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Recipient Type</label>
+              <select
+                value={emailData.recipient_type}
+                onChange={(e) => setEmailData({...emailData, recipient_type: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="user">All Customers</option>
+                <option value="handler">All Handlers</option>
+                <option value="partner">All Partners</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Subject</label>
+              <input
+                type="text"
+                value={emailData.subject}
+                onChange={(e) => setEmailData({...emailData, subject: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2"
+                placeholder="Email subject..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Body (HTML supported)</label>
+              <textarea
+                value={emailData.body}
+                onChange={(e) => setEmailData({...emailData, body: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2 h-48"
+                placeholder="Email body..."
+              />
+            </div>
+            <button
+              onClick={handleSend}
+              disabled={sending}
+              className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+            >
+              {sending ? 'Sending...' : 'Send Email'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderPageContent = () => {
     switch (activePage) {
       case 'dashboard':
@@ -360,6 +636,12 @@ export default function AdminNew() {
         return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Services Management</h2><p className="text-gray-600 mt-2">Services management functionality coming soon...</p></div>;
       case 'payments':
         return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Payments Management</h2><p className="text-gray-600 mt-2">Payments management functionality coming soon...</p></div>;
+      case 'app-settings':
+        return <AppSettingsContent />;
+      case 'chat-history':
+        return <ChatHistoryContent />;
+      case 'send-email':
+        return <SendEmailContent />;
       case 'company':
         return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Company Settings</h2><p className="text-gray-600 mt-2">Company settings functionality coming soon...</p></div>;
       case 'stripe':
