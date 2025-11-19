@@ -3612,6 +3612,187 @@ async def update_stripe_settings(request: StripeSettingsUpdate):
         "mode": mode
     }
 
+# ==================== App Settings Routes ====================
+
+@api_router.get("/admin/app-settings")
+async def get_app_settings():
+    """Get app settings"""
+    settings = await db.app_settings.find_one()
+    if not settings:
+        # Return defaults
+        return {
+            "app_name": "ExperTrait",
+            "app_logo_url": "/favicon.svg",
+            "customer_privacy_policy": "Default customer privacy policy...",
+            "customer_terms_of_use": "Default customer terms of use...",
+            "handler_privacy_policy": "Default handler privacy policy...",
+            "handler_terms_of_use": "Default handler terms of use...",
+            "partner_privacy_policy": "Default partner privacy policy...",
+            "partner_terms_of_use": "Default partner terms of use..."
+        }
+    return serialize_doc(settings)
+
+@api_router.put("/admin/app-settings")
+async def update_app_settings(request: AppSettingsUpdate):
+    """Update app settings"""
+    settings = await db.app_settings.find_one()
+    
+    update_data = {k: v for k, v in request.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    if not settings:
+        update_data["created_at"] = datetime.utcnow()
+        await db.app_settings.insert_one(update_data)
+    else:
+        await db.app_settings.update_one(
+            {"_id": settings["_id"]},
+            {"$set": update_data}
+        )
+    
+    return {"message": "App settings updated successfully", "updated_fields": list(update_data.keys())}
+
+# ==================== Chat History Routes ====================
+
+@api_router.get("/admin/chat-history")
+async def get_all_chat_history(booking_id: Optional[str] = None, limit: int = 100):
+    """Get all chat history across bookings"""
+    query = {}
+    if booking_id:
+        if ObjectId.is_valid(booking_id):
+            query["booking_id"] = booking_id
+    
+    chats = await db.booking_chats.find(query).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Enrich with booking and user details
+    enriched_chats = []
+    for chat in chats:
+        booking = await db.bookings.find_one({"_id": ObjectId(chat["booking_id"])}) if ObjectId.is_valid(chat.get("booking_id", "")) else None
+        
+        sender = await db.users.find_one({"_id": ObjectId(chat["sender_id"])}) if ObjectId.is_valid(chat.get("sender_id", "")) else None
+        
+        enriched_chat = serialize_doc(chat)
+        enriched_chat["booking_details"] = serialize_doc(booking) if booking else None
+        enriched_chat["sender_details"] = {
+            "name": sender.get("name") if sender else "Unknown",
+            "user_type": sender.get("user_type") if sender else "Unknown"
+        }
+        enriched_chats.append(enriched_chat)
+    
+    return {"chats": enriched_chats, "total": len(enriched_chats)}
+
+@api_router.get("/admin/chat-history/booking/{booking_id}")
+async def get_booking_chat_history(booking_id: str):
+    """Get chat history for a specific booking"""
+    if not ObjectId.is_valid(booking_id):
+        raise HTTPException(status_code=400, detail="Invalid booking ID")
+    
+    chats = await db.booking_chats.find({"booking_id": booking_id}).sort("created_at", 1).to_list(1000)
+    
+    # Get booking details
+    booking = await db.bookings.find_one({"_id": ObjectId(booking_id)})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Get participants
+    customer = await db.users.find_one({"_id": ObjectId(booking["user_id"])})
+    handler = await db.users.find_one({"_id": ObjectId(booking.get("handler_id", ""))}) if booking.get("handler_id") else None
+    
+    enriched_chats = []
+    for chat in chats:
+        sender = await db.users.find_one({"_id": ObjectId(chat["sender_id"])})
+        enriched_chat = serialize_doc(chat)
+        enriched_chat["sender_name"] = sender.get("name") if sender else "Unknown"
+        enriched_chat["sender_type"] = sender.get("user_type") if sender else "Unknown"
+        enriched_chats.append(enriched_chat)
+    
+    return {
+        "booking": serialize_doc(booking),
+        "customer": {"name": customer.get("name"), "id": str(customer["_id"])} if customer else None,
+        "handler": {"name": handler.get("name"), "id": str(handler["_id"])} if handler else None,
+        "chats": enriched_chats,
+        "total_messages": len(enriched_chats)
+    }
+
+# ==================== Email Sending Routes ====================
+
+@api_router.post("/admin/send-email")
+async def send_admin_email(request: EmailSendRequest):
+    """Send email to users, handlers, or partners"""
+    recipients = []
+    
+    if request.recipient_type == "individual" and request.recipient_id:
+        # Send to specific individual
+        if not ObjectId.is_valid(request.recipient_id):
+            raise HTTPException(status_code=400, detail="Invalid recipient ID")
+        
+        # Try to find in users first
+        user = await db.users.find_one({"_id": ObjectId(request.recipient_id)})
+        if user:
+            recipients.append({"email": user.get("email"), "name": user.get("name")})
+        else:
+            # Try partners
+            partner = await db.partners.find_one({"_id": ObjectId(request.recipient_id)})
+            if partner:
+                recipients.append({"email": partner.get("email"), "name": partner.get("representative_full_name")})
+            else:
+                raise HTTPException(status_code=404, detail="Recipient not found")
+    
+    elif request.send_to_all:
+        # Send to all of type
+        if request.recipient_type == "user":
+            users = await db.users.find({"user_type": "customer"}).to_list(10000)
+            recipients = [{"email": u.get("email"), "name": u.get("name")} for u in users if u.get("email")]
+        
+        elif request.recipient_type == "handler":
+            handlers = await db.users.find({"user_type": "handler"}).to_list(10000)
+            recipients = [{"email": h.get("email"), "name": h.get("name")} for h in handlers if h.get("email")]
+        
+        elif request.recipient_type == "partner":
+            partners = await db.partners.find({}).to_list(10000)
+            recipients = [{"email": p.get("email"), "name": p.get("representative_full_name")} for p in partners if p.get("email")]
+    
+    if not recipients:
+        raise HTTPException(status_code=400, detail="No recipients found")
+    
+    # Send emails (in production, use background tasks)
+    sent_count = 0
+    failed_count = 0
+    
+    for recipient in recipients:
+        try:
+            await send_admin_alert_email(
+                subject=request.subject,
+                body=f"<p>Hello {recipient['name']},</p>{request.body}",
+                to_email=recipient['email']
+            )
+            sent_count += 1
+        except Exception as e:
+            failed_count += 1
+            print(f"Failed to send email to {recipient['email']}: {e}")
+    
+    # Log email send activity
+    await db.email_logs.insert_one({
+        "recipient_type": request.recipient_type,
+        "subject": request.subject,
+        "sent_count": sent_count,
+        "failed_count": failed_count,
+        "total_recipients": len(recipients),
+        "sent_at": datetime.utcnow()
+    })
+    
+    return {
+        "message": f"Email sent to {sent_count} recipients",
+        "sent_count": sent_count,
+        "failed_count": failed_count,
+        "total_recipients": len(recipients)
+    }
+
+@api_router.get("/admin/email-logs")
+async def get_email_logs(limit: int = 50):
+    """Get email sending logs"""
+    logs = await db.email_logs.find({}).sort("sent_at", -1).limit(limit).to_list(limit)
+    return {"logs": [serialize_doc(log) for log in logs], "total": len(logs)}
+
 app.include_router(api_router)
 
 # Serve landing page
