@@ -649,6 +649,8 @@ test_plan:
   test_priority: "high_first"
 
 agent_communication:
+    - agent: "main"
+      message: "Implemented Search and Advanced Search integration for mobile app. Updated home screen search bar to navigate to advanced-search screen (tappable search bar with advanced search icon button). Added 'Browse All Services' button on home page for easy access. The advanced-search screen features: real-time search, category filters (multi-select), price range slider (£0-£200), minimum rating filter (3+, 4+, 5+), sort options (relevance, price low-high, rating, popular), and toggle between Services and Handlers views. Services display with category badges, ratings, and pricing. Handlers show avatar, rating, skills, and availability status. Modal-based detailed filters with clear/apply options. Backend APIs required: GET /api/services, GET /api/services/categories, GET /api/handlers. Ready for backend testing."
     - agent: "testing"
       message: "Comprehensive backend API testing completed successfully. All 24 test cases passed with 100% success rate. Fixed several backend issues during testing: 1) Added default values for missing professional fields (skills, bio, rating, etc.), 2) Improved ObjectId validation to return proper 400 errors, 3) Fixed availability endpoint parameter handling. The Oscar Home Services backend API is fully functional and ready for production use."
     - agent: "testing"
