@@ -574,6 +574,18 @@ frontend:
           agent: "testing"
           comment: "Unable to test due to authentication flow issue. Cannot access home screen to navigate to custom task screen. Screen implementation appears complete based on code review."
 
+  - task: "Search and Advanced Search Integration"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(customer)/home.tsx, /app/frontend/app/(customer)/advanced-search.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Integrated search functionality into home screen. Changes: 1) Updated home.tsx search bar to navigate to advanced-search screen when clicked, 2) Added 'Advanced Search' icon button in search bar, 3) Added 'Browse All Services' button below home content, 4) Updated advanced-search.tsx to accept and use query parameter from home screen. The advanced-search screen includes: search bar, category filters, price range slider, rating filter, sort options (relevance, price, rating, popular), services & handlers view toggle, modal for detailed filters. Backend endpoints required: GET /api/services, GET /api/services/categories, GET /api/handlers. Ready for testing."
+
   - task: "Partner Login Page"
     implemented: true
     working: "NA"
