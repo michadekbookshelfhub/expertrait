@@ -69,6 +69,8 @@ export default function Index() {
       // Navigate based on user type
       if (user.user_type === 'professional') {
         router.replace('/(professional)/dashboard');
+      } else if (user.user_type === 'partner') {
+        router.replace('/(partner)/dashboard');
       } else {
         router.replace('/(customer)/home');
       }
