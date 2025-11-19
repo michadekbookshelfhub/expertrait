@@ -7,7 +7,10 @@ export default function HandlerReviewsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [reviews, setReviews] = useState<any[]>([]);
+  const [filteredReviews, setFilteredReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'recent' | 'highest' | 'lowest'>('recent');
+  const [filterRating, setFilterRating] = useState<number>(0); // 0 = all ratings
 
   const handlerId = params.handlerId as string;
   const handlerName = params.handlerName as string;
@@ -15,6 +18,10 @@ export default function HandlerReviewsScreen() {
   useEffect(() => {
     loadReviews();
   }, []);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [reviews, sortBy, filterRating]);
 
   const loadReviews = async () => {
     try {
