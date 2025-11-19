@@ -77,50 +77,76 @@ export default function PartnerDashboard() {
         </View>
       </View>
 
-      <View style={styles.card}>
-        <Ionicons name="checkmark-circle" size={48} color="#10B981" />
-        <Text style={styles.welcomeTitle}>Welcome to ExperTrait Partner Portal</Text>
-        <Text style={styles.welcomeText}>
-          Your account is currently: <Text style={styles.statusText}>{user?.status || 'Pending Approval'}</Text>
-        </Text>
-        <Text style={styles.infoText}>
-          Full dashboard features will be available once your account is approved by our admin team.
-        </Text>
+      <View style={styles.statsContainer}>
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { backgroundColor: '#DBEAFE' }]}>
+            <Ionicons name="people" size={32} color="#2563EB" />
+            <Text style={styles.statValue}>{stats?.totalWorkers || 0}</Text>
+            <Text style={styles.statLabel}>Healthcare Workers</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: '#FEF3C7' }]}>
+            <Ionicons name="calendar" size={32} color="#D97706" />
+            <Text style={styles.statValue}>{stats?.totalBookings || 0}</Text>
+            <Text style={styles.statLabel}>Total Bookings</Text>
+          </View>
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { backgroundColor: '#D1FAE5' }]}>
+            <Ionicons name="time" size={32} color="#059669" />
+            <Text style={styles.statValue}>{stats?.activeBookings || 0}</Text>
+            <Text style={styles.statLabel}>Active Bookings</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: '#E0E7FF' }]}>
+            <Ionicons name="checkmark-circle" size={32} color="#6366F1" />
+            <Text style={styles.statValue}>{stats?.completedBookings || 0}</Text>
+            <Text style={styles.statLabel}>Completed</Text>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.featuresContainer}>
-        <Text style={styles.sectionTitle}>Coming Soon Features</Text>
+      <View style={styles.quickActions}>
+        <Text style={styles.sectionTitle}>Quick Access</Text>
         
-        <View style={styles.featureCard}>
-          <Ionicons name="people" size={32} color="#3B82F6" />
-          <View style={styles.featureContent}>
-            <Text style={styles.featureTitle}>Healthcare Workers</Text>
-            <Text style={styles.featureDesc}>View and manage your assigned healthcare workers</Text>
+        <TouchableOpacity style={styles.actionCard}>
+          <View style={styles.actionIcon}>
+            <Ionicons name="people" size={24} color="#2563EB" />
           </View>
-        </View>
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>View Workers</Text>
+            <Text style={styles.actionDesc}>Manage your healthcare team</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+        </TouchableOpacity>
 
-        <View style={styles.featureCard}>
-          <Ionicons name="calendar" size={32} color="#8B5CF6" />
-          <View style={styles.featureContent}>
-            <Text style={styles.featureTitle}>Bookings Monitor</Text>
-            <Text style={styles.featureDesc}>Track all bookings for your workers in real-time</Text>
+        <TouchableOpacity style={styles.actionCard}>
+          <View style={styles.actionIcon}>
+            <Ionicons name="calendar" size={24} color="#8B5CF6" />
           </View>
-        </View>
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>Monitor Bookings</Text>
+            <Text style={styles.actionDesc}>Track service requests</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+        </TouchableOpacity>
 
-        <View style={styles.featureCard}>
-          <Ionicons name="stats-chart" size={32} color="#F59E0B" />
-          <View style={styles.featureContent}>
-            <Text style={styles.featureTitle}>Analytics & Reports</Text>
-            <Text style={styles.featureDesc}>View performance metrics and booking statistics</Text>
+        <TouchableOpacity style={styles.actionCard}>
+          <View style={styles.actionIcon}>
+            <Ionicons name="person" size={24} color="#10B981" />
           </View>
-        </View>
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>Organization Profile</Text>
+            <Text style={styles.actionDesc}>View and update details</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.supportCard}>
-        <Ionicons name="help-circle" size={32} color="#6B7280" />
-        <Text style={styles.supportTitle}>Need Help?</Text>
-        <Text style={styles.supportText}>
-          Contact our support team if you have any questions about your partner account.
+      <View style={styles.infoCard}>
+        <Ionicons name="information-circle" size={32} color="#0EA5E9" />
+        <Text style={styles.infoTitle}>Partner Portal</Text>
+        <Text style={styles.infoText}>
+          Use the navigation tabs below to access workers, bookings, and your profile.
         </Text>
       </View>
     </ScrollView>
