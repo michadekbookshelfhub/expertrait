@@ -182,7 +182,7 @@ export default function MyJobsNew() {
           >
             <Ionicons
               name={filter.icon}
-              size={18}
+              size={14}
               color={selectedStatus === filter.id ? '#FFF' : filter.color}
             />
             <Text
