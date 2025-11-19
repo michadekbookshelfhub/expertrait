@@ -54,6 +54,26 @@ export default function ProfessionalLayout() {
       />
       {/* Hide other professional screens from tab bar */}
       <Tabs.Screen
+        name="jobs"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="my-skills"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="job-detail"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="service-areas"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="payment-methods"
         options={{ href: null }}
       />
@@ -62,19 +82,11 @@ export default function ProfessionalLayout() {
         options={{ href: null }}
       />
       <Tabs.Screen
-        name="service-area"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
         name="reviews"
         options={{ href: null }}
       />
       <Tabs.Screen
         name="edit-profile-pro"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="notifications-pro"
         options={{ href: null }}
       />
       <Tabs.Screen
