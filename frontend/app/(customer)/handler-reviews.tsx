@@ -107,9 +107,74 @@ export default function HandlerReviewsScreen() {
         <Text style={styles.handlerName}>{handlerName}</Text>
       </View>
 
+      {/* Filters */}
+      <View style={styles.filtersContainer}>
+        <Text style={styles.filtersTitle}>Filter & Sort</Text>
+        
+        <View style={styles.filterRow}>
+          <Text style={styles.filterLabel}>Sort by:</Text>
+          <View style={styles.sortButtons}>
+            <TouchableOpacity
+              style={[styles.filterButton, sortBy === 'recent' && styles.filterButtonActive]}
+              onPress={() => setSortBy('recent')}
+            >
+              <Text style={[styles.filterButtonText, sortBy === 'recent' && styles.filterButtonTextActive]}>
+                Recent
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterButton, sortBy === 'highest' && styles.filterButtonActive]}
+              onPress={() => setSortBy('highest')}
+            >
+              <Text style={[styles.filterButtonText, sortBy === 'highest' && styles.filterButtonTextActive]}>
+                Highest
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterButton, sortBy === 'lowest' && styles.filterButtonActive]}
+              onPress={() => setSortBy('lowest')}
+            >
+              <Text style={[styles.filterButtonText, sortBy === 'lowest' && styles.filterButtonTextActive]}>
+                Lowest
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.filterRow}>
+          <Text style={styles.filterLabel}>Rating:</Text>
+          <View style={styles.ratingFilters}>
+            <TouchableOpacity
+              style={[styles.ratingFilterButton, filterRating === 0 && styles.filterButtonActive]}
+              onPress={() => setFilterRating(0)}
+            >
+              <Text style={[styles.filterButtonText, filterRating === 0 && styles.filterButtonTextActive]}>
+                All
+              </Text>
+            </TouchableOpacity>
+            {[5, 4, 3, 2, 1].map((rating) => (
+              <TouchableOpacity
+                key={rating}
+                style={[styles.ratingFilterButton, filterRating === rating && styles.filterButtonActive]}
+                onPress={() => setFilterRating(rating)}
+              >
+                <Ionicons
+                  name="star"
+                  size={12}
+                  color={filterRating === rating ? '#FFF' : '#F59E0B'}
+                />
+                <Text style={[styles.filterButtonText, filterRating === rating && styles.filterButtonTextActive]}>
+                  {rating}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
       {/* Reviews List */}
       <View style={styles.reviewsList}>
-        {reviews.length === 0 ? (
+        {filteredReviews.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="chatbox-ellipses-outline" size={64} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No Reviews Yet</Text>
