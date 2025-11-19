@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
 """
-Comprehensive Partner System API Testing for ExperTrait Healthcare Platform
-Testing Partner Registration, Authentication, Admin Management, and Data Access APIs
+Admin Dashboard Backend API Testing
+Testing specific Admin Dashboard APIs as requested:
+1. App Settings API (Priority: HIGH)
+2. Chat History API (Priority: MEDIUM) 
+3. Send Email API (Priority: HIGH)
 """
 
 import requests
 import json
-import time
+import sys
 from datetime import datetime
-from typing import Dict, Any, Optional
 
-# Configuration
-BASE_URL = "https://skill-nexus-24.preview.emergentagent.com/api"
-HEALTHCARE_CATEGORIES = [
-    "Baby Sitter",
-    "Dog Sitter", 
-    "Mental Support Worker",
-    "Domiciliary Care Worker",
-    "Support Worker (Sit-in)"
-]
+# Backend URL from environment
+BACKEND_URL = "https://skill-nexus-24.preview.emergentagent.com/api"
 
-class PartnerAPITester:
+class AdminDashboardTester:
     def __init__(self):
         self.session = requests.Session()
         self.test_results = []
