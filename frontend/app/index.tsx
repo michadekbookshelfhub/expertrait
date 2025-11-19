@@ -27,8 +27,26 @@ export default function Index() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [userType, setUserType] = useState<'customer' | 'professional'>('customer');
+  const [userType, setUserType] = useState<'customer' | 'professional' | 'partner'>('customer');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  
+  // Partner specific fields
+  const [representativeName, setRepresentativeName] = useState('');
+  const [representativeAddress, setRepresentativeAddress] = useState('');
+  const [representativeJobRole, setRepresentativeJobRole] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
+  const [companyPhone, setCompanyPhone] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [healthcareCategory, setHealthcareCategory] = useState('');
+
+  const healthcareCategories = [
+    'Baby Sitter',
+    'Dog Sitter',
+    'Mental Support Worker',
+    'Domiciliary Care Worker',
+    'Support Worker (Sit-in)'
+  ];
 
   // Available service categories for professionals
   const serviceCategories = [
