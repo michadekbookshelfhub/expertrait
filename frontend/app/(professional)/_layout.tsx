@@ -85,6 +85,14 @@ export default function ProfessionalLayout() {
         name="help-center-pro"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="privacy-policy"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="terms-of-service"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
