@@ -266,6 +266,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
   },
+  searchPlaceholder: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#999',
+  },
+  advancedSearchButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
   scrollView: {
     flex: 1,
   },
