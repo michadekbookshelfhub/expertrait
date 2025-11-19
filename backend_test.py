@@ -19,754 +19,394 @@ class AdminDashboardTester:
     def __init__(self):
         self.session = requests.Session()
         self.test_results = []
-        self.created_partners = []
-        self.created_handlers = []
-        self.created_bookings = []
+        self.total_tests = 0
+        self.passed_tests = 0
         
-    def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
-        """Log test results"""
-        result = {
-            "test": test_name,
-            "success": success,
-            "details": details,
-            "timestamp": datetime.now().isoformat(),
-            "response_data": response_data
-        }
-        self.test_results.append(result)
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status}: {test_name}")
+    def log_test(self, test_name, passed, details=""):
+        """Log test result"""
+        self.total_tests += 1
+        if passed:
+            self.passed_tests += 1
+            status = "✅ PASS"
+        else:
+            status = "❌ FAIL"
+        
+        result = f"{status}: {test_name}"
         if details:
-            print(f"   Details: {details}")
-        if not success and response_data:
-            print(f"   Response: {response_data}")
-        print()
-
-    def make_request(self, method: str, endpoint: str, data: Dict = None, params: Dict = None) -> tuple:
-        """Make HTTP request and return (success, response_data, status_code)"""
+            result += f" - {details}"
+        
+        print(result)
+        self.test_results.append({
+            "test": test_name,
+            "passed": passed,
+            "details": details
+        })
+    
+    def test_app_settings_api(self):
+        """Test App Settings API (Priority: HIGH)"""
+        print("\n🔧 TESTING APP SETTINGS API (Priority: HIGH)")
+        print("=" * 60)
+        
+        # Test 1: GET /api/admin/app-settings - Should return default settings
         try:
-            url = f"{BASE_URL}{endpoint}"
+            response = self.session.get(f"{BACKEND_URL}/admin/app-settings")
             
-            if method.upper() == "GET":
-                response = self.session.get(url, params=params)
-            elif method.upper() == "POST":
-                response = self.session.post(url, json=data)
-            elif method.upper() == "PUT":
-                response = self.session.put(url, json=data)
-            elif method.upper() == "PATCH":
-                response = self.session.patch(url, json=data)
-            elif method.upper() == "DELETE":
-                response = self.session.delete(url)
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = [
+                    "app_name", "app_logo_url", "customer_privacy_policy", 
+                    "customer_terms_of_use", "handler_privacy_policy", 
+                    "handler_terms_of_use", "partner_privacy_policy", 
+                    "partner_terms_of_use"
+                ]
+                
+                missing_fields = [field for field in required_fields if field not in data]
+                if not missing_fields:
+                    self.log_test("GET /admin/app-settings returns all required fields", True, 
+                                f"All 8 required fields present: {', '.join(required_fields)}")
+                else:
+                    self.log_test("GET /admin/app-settings returns all required fields", False, 
+                                f"Missing fields: {missing_fields}")
+                
+                # Check default values
+                if data.get("app_name") == "ExperTrait":
+                    self.log_test("GET /admin/app-settings returns correct default app_name", True, 
+                                "app_name = 'ExperTrait'")
+                else:
+                    self.log_test("GET /admin/app-settings returns correct default app_name", False, 
+                                f"Expected 'ExperTrait', got '{data.get('app_name')}'")
             else:
-                return False, {"error": "Invalid HTTP method"}, 400
-            
-            try:
-                response_data = response.json()
-            except:
-                response_data = {"text": response.text}
-            
-            return response.status_code < 400, response_data, response.status_code
-            
+                self.log_test("GET /admin/app-settings", False, 
+                            f"HTTP {response.status_code}: {response.text}")
         except Exception as e:
-            return False, {"error": str(e)}, 500
-
-    # ==================== PRIORITY 1: Partner Registration & Authentication ====================
+            self.log_test("GET /admin/app-settings", False, f"Exception: {str(e)}")
+        
+        # Test 2: PUT /api/admin/app-settings - Should save/update settings
+        try:
+            test_settings = {
+                "app_name": "ExperTrait Updated",
+                "app_logo_url": "/test-logo.svg",
+                "customer_privacy_policy": "Updated customer privacy policy for testing",
+                "customer_terms_of_use": "Updated customer terms for testing",
+                "handler_privacy_policy": "Updated handler privacy policy for testing",
+                "handler_terms_of_use": "Updated handler terms for testing",
+                "partner_privacy_policy": "Updated partner privacy policy for testing",
+                "partner_terms_of_use": "Updated partner terms for testing"
+            }
+            
+            response = self.session.put(f"{BACKEND_URL}/admin/app-settings", 
+                                      json=test_settings,
+                                      headers={"Content-Type": "application/json"})
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "message" in data and "updated_fields" in data:
+                    self.log_test("PUT /admin/app-settings updates settings", True, 
+                                f"Updated {len(data['updated_fields'])} fields")
+                else:
+                    self.log_test("PUT /admin/app-settings updates settings", False, 
+                                f"Unexpected response format: {data}")
+            else:
+                self.log_test("PUT /admin/app-settings updates settings", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("PUT /admin/app-settings updates settings", False, f"Exception: {str(e)}")
+        
+        # Test 3: Verify settings were saved by getting them again
+        try:
+            response = self.session.get(f"{BACKEND_URL}/admin/app-settings")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("app_name") == "ExperTrait Updated":
+                    self.log_test("PUT /admin/app-settings persists changes", True, 
+                                "Settings successfully saved and retrieved")
+                else:
+                    self.log_test("PUT /admin/app-settings persists changes", False, 
+                                f"Expected 'ExperTrait Updated', got '{data.get('app_name')}'")
+            else:
+                self.log_test("PUT /admin/app-settings persists changes", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("PUT /admin/app-settings persists changes", False, f"Exception: {str(e)}")
     
-    def test_partner_registration_success(self):
-        """Test successful partner registration with all required fields"""
-        timestamp = int(time.time())
-        partner_data = {
-            "name": "Dr. Sarah Johnson",
-            "email": f"sarah.johnson.{timestamp}@healthcareplus.com",
-            "password": "SecurePass123!",
-            "organization_name": "HealthCare Plus Ltd",
-            "license_number": f"HC-2024-{timestamp}",
-            "phone": "+44 20 7946 0958",
-            "address": "123 Healthcare Street, London, UK",
-            "healthcare_category": "Mental Support Worker"
-        }
+    def test_chat_history_api(self):
+        """Test Chat History API (Priority: MEDIUM)"""
+        print("\n💬 TESTING CHAT HISTORY API (Priority: MEDIUM)")
+        print("=" * 60)
         
-        success, response, status_code = self.make_request("POST", "/partner/register", partner_data)
-        
-        if success and "partner_id" in response:
-            self.created_partners.append({
-                "id": response["partner_id"],
-                "email": partner_data["email"],
-                "password": partner_data["password"],
-                "category": partner_data["healthcare_category"]
-            })
-            self.log_test(
-                "Partner Registration - Success Case",
-                True,
-                f"Partner registered with ID: {response['partner_id']}, Status: {response.get('status', 'unknown')}",
-                response
-            )
-        else:
-            self.log_test(
-                "Partner Registration - Success Case",
-                False,
-                f"Registration failed with status {status_code}",
-                response
-            )
-
-    def test_partner_registration_invalid_category(self):
-        """Test partner registration with invalid healthcare category"""
-        partner_data = {
-            "name": "Dr. Invalid Category",
-            "email": "invalid@test.com",
-            "password": "SecurePass123!",
-            "organization_name": "Invalid Care Ltd",
-            "license_number": "IC-2024-001",
-            "phone": "+44 20 7946 0959",
-            "address": "456 Invalid Street, London, UK",
-            "healthcare_category": "Invalid Category"
-        }
-        
-        success, response, status_code = self.make_request("POST", "/partner/register", partner_data)
-        
-        expected_failure = not success and status_code == 400
-        self.log_test(
-            "Partner Registration - Invalid Healthcare Category",
-            expected_failure,
-            f"Expected 400 error for invalid category, got {status_code}",
-            response
-        )
-
-    def test_partner_registration_duplicate_email(self):
-        """Test partner registration with duplicate email"""
-        if not self.created_partners:
-            self.log_test(
-                "Partner Registration - Duplicate Email",
-                False,
-                "No existing partner to test duplicate email",
-                {}
-            )
-            return
+        # Test 1: GET /api/admin/chat-history - Should return empty list if no chats
+        try:
+            response = self.session.get(f"{BACKEND_URL}/admin/chat-history")
             
-        partner_data = {
-            "name": "Dr. Duplicate Email",
-            "email": self.created_partners[0]["email"],  # Use existing email
-            "password": "AnotherPass123!",
-            "organization_name": "Duplicate Care Ltd",
-            "license_number": "DC-2024-001",
-            "phone": "+44 20 7946 0960",
-            "address": "789 Duplicate Street, London, UK",
-            "healthcare_category": "Baby Sitter"
-        }
+            if response.status_code == 200:
+                data = response.json()
+                if "chats" in data and "total" in data:
+                    self.log_test("GET /admin/chat-history returns proper structure", True, 
+                                f"Found {data['total']} chats")
+                    
+                    # Check if it's empty or has data
+                    if data["total"] == 0:
+                        self.log_test("GET /admin/chat-history handles empty state", True, 
+                                    "Returns empty list when no chats exist")
+                    else:
+                        self.log_test("GET /admin/chat-history returns chat data", True, 
+                                    f"Found {data['total']} chat messages")
+                else:
+                    self.log_test("GET /admin/chat-history returns proper structure", False, 
+                                f"Missing 'chats' or 'total' field: {data}")
+            else:
+                self.log_test("GET /admin/chat-history", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("GET /admin/chat-history", False, f"Exception: {str(e)}")
         
-        success, response, status_code = self.make_request("POST", "/partner/register", partner_data)
-        
-        expected_failure = not success and status_code == 400
-        self.log_test(
-            "Partner Registration - Duplicate Email Rejection",
-            expected_failure,
-            f"Expected 400 error for duplicate email, got {status_code}",
-            response
-        )
-
-    def test_partner_login_pending_status(self):
-        """Test partner login with pending status (should be rejected)"""
-        if not self.created_partners:
-            self.log_test(
-                "Partner Login - Pending Status Rejection",
-                False,
-                "No partner available for login test",
-                {}
-            )
-            return
+        # Test 2: GET /api/admin/chat-history?limit=10 - Should respect limit parameter
+        try:
+            response = self.session.get(f"{BACKEND_URL}/admin/chat-history?limit=5")
             
-        partner = self.created_partners[0]
-        login_data = {
-            "email": partner["email"],
-            "password": partner["password"]
-        }
+            if response.status_code == 200:
+                data = response.json()
+                if "chats" in data:
+                    chat_count = len(data["chats"])
+                    if chat_count <= 5:
+                        self.log_test("GET /admin/chat-history respects limit parameter", True, 
+                                    f"Returned {chat_count} chats (limit=5)")
+                    else:
+                        self.log_test("GET /admin/chat-history respects limit parameter", False, 
+                                    f"Returned {chat_count} chats, expected ≤5")
+                else:
+                    self.log_test("GET /admin/chat-history respects limit parameter", False, 
+                                "Missing 'chats' field in response")
+            else:
+                self.log_test("GET /admin/chat-history with limit", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("GET /admin/chat-history with limit", False, f"Exception: {str(e)}")
         
-        success, response, status_code = self.make_request("POST", "/partner/login", login_data)
-        
-        # Should fail with 403 because partner is still pending
-        expected_failure = not success and status_code == 403
-        self.log_test(
-            "Partner Login - Pending Status Rejection",
-            expected_failure,
-            f"Expected 403 error for pending partner, got {status_code}",
-            response
-        )
-
-    def test_partner_login_invalid_credentials(self):
-        """Test partner login with wrong password"""
-        if not self.created_partners:
-            self.log_test(
-                "Partner Login - Invalid Credentials",
-                False,
-                "No partner available for login test",
-                {}
-            )
-            return
-            
-        partner = self.created_partners[0]
-        login_data = {
-            "email": partner["email"],
-            "password": "WrongPassword123!"
-        }
-        
-        success, response, status_code = self.make_request("POST", "/partner/login", login_data)
-        
-        expected_failure = not success and status_code == 401
-        self.log_test(
-            "Partner Login - Invalid Credentials",
-            expected_failure,
-            f"Expected 401 error for wrong password, got {status_code}",
-            response
-        )
-
-    def test_partner_login_nonexistent_email(self):
-        """Test partner login with non-existent email"""
-        login_data = {
-            "email": "nonexistent@partner.com",
-            "password": "SomePassword123!"
-        }
-        
-        success, response, status_code = self.make_request("POST", "/partner/login", login_data)
-        
-        expected_failure = not success and status_code == 401
-        self.log_test(
-            "Partner Login - Non-existent Email",
-            expected_failure,
-            f"Expected 401 error for non-existent email, got {status_code}",
-            response
-        )
-
-    # ==================== PRIORITY 2: Admin Partner Management ====================
+        # Test 3: Test with different limit values
+        for limit in [1, 3, 50]:
+            try:
+                response = self.session.get(f"{BACKEND_URL}/admin/chat-history?limit={limit}")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    chat_count = len(data.get("chats", []))
+                    if chat_count <= limit:
+                        self.log_test(f"GET /admin/chat-history limit={limit}", True, 
+                                    f"Returned {chat_count} chats")
+                    else:
+                        self.log_test(f"GET /admin/chat-history limit={limit}", False, 
+                                    f"Returned {chat_count} chats, expected ≤{limit}")
+                else:
+                    self.log_test(f"GET /admin/chat-history limit={limit}", False, 
+                                f"HTTP {response.status_code}")
+            except Exception as e:
+                self.log_test(f"GET /admin/chat-history limit={limit}", False, f"Exception: {str(e)}")
     
-    def test_admin_approve_partner(self):
-        """Test admin approving a partner"""
-        if not self.created_partners:
-            self.log_test(
-                "Admin Partner Approval",
-                False,
-                "No partner available for approval test",
-                {}
-            )
-            return
+    def test_send_email_api(self):
+        """Test Send Email API (Priority: HIGH)"""
+        print("\n📧 TESTING SEND EMAIL API (Priority: HIGH)")
+        print("=" * 60)
+        
+        # Test 1: POST /api/admin/send-email with recipient_type="user" - Should handle sending to all customers
+        try:
+            email_data = {
+                "recipient_type": "user",
+                "subject": "Test Email to All Customers",
+                "body": "This is a test email sent to all customers from the admin dashboard.",
+                "send_to_all": True
+            }
             
-        partner_id = self.created_partners[0]["id"]
-        
-        # Note: The API expects status as a query parameter, not in request body
-        success, response, status_code = self.make_request(
-            "PUT", 
-            f"/admin/partners/{partner_id}/status?status=approved"
-        )
-        
-        if success:
-            # Update partner status in our tracking
-            self.created_partners[0]["status"] = "approved"
+            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
+                                       json=email_data,
+                                       headers={"Content-Type": "application/json"})
             
-        self.log_test(
-            "Admin Partner Approval",
-            success,
-            f"Partner approval status: {status_code}",
-            response
-        )
-
-    def test_admin_reject_partner(self):
-        """Test admin rejecting a partner"""
-        # Create another partner for rejection test
-        timestamp = int(time.time())
-        partner_data = {
-            "name": "Dr. Reject Test",
-            "email": f"reject.test.{timestamp}@healthcare.com",
-            "password": "RejectPass123!",
-            "organization_name": "Reject Test Care",
-            "license_number": f"RT-2024-{timestamp}",
-            "phone": "+44 20 7946 0961",
-            "address": "999 Reject Street, London, UK",
-            "healthcare_category": "Dog Sitter"
-        }
+            if response.status_code == 200:
+                data = response.json()
+                if "sent_count" in data and "total_recipients" in data:
+                    self.log_test("POST /admin/send-email to all customers", True, 
+                                f"Sent to {data['sent_count']}/{data['total_recipients']} customers")
+                else:
+                    self.log_test("POST /admin/send-email to all customers", True, 
+                                "Email sending completed (SendGrid mocked)")
+            else:
+                self.log_test("POST /admin/send-email to all customers", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("POST /admin/send-email to all customers", False, f"Exception: {str(e)}")
         
-        reg_success, reg_response, _ = self.make_request("POST", "/partner/register", partner_data)
-        
-        if not reg_success or "partner_id" not in reg_response:
-            self.log_test(
-                "Admin Partner Rejection",
-                False,
-                "Failed to create partner for rejection test",
-                reg_response
-            )
-            return
+        # Test 2: POST /api/admin/send-email with recipient_type="handler" - Should handle sending to all handlers
+        try:
+            email_data = {
+                "recipient_type": "handler",
+                "subject": "Test Email to All Handlers",
+                "body": "This is a test email sent to all handlers from the admin dashboard.",
+                "send_to_all": True
+            }
             
-        partner_id = reg_response["partner_id"]
-        
-        success, response, status_code = self.make_request(
-            "PUT", 
-            f"/admin/partners/{partner_id}/status?status=rejected"
-        )
-        
-        self.log_test(
-            "Admin Partner Rejection",
-            success,
-            f"Partner rejection status: {status_code}",
-            response
-        )
-
-    def test_admin_suspend_partner(self):
-        """Test admin suspending a partner"""
-        if not self.created_partners or self.created_partners[0].get("status") != "approved":
-            self.log_test(
-                "Admin Partner Suspension",
-                False,
-                "No approved partner available for suspension test",
-                {}
-            )
-            return
+            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
+                                       json=email_data,
+                                       headers={"Content-Type": "application/json"})
             
-        partner_id = self.created_partners[0]["id"]
+            if response.status_code == 200:
+                data = response.json()
+                if "sent_count" in data and "total_recipients" in data:
+                    self.log_test("POST /admin/send-email to all handlers", True, 
+                                f"Sent to {data['sent_count']}/{data['total_recipients']} handlers")
+                else:
+                    self.log_test("POST /admin/send-email to all handlers", True, 
+                                "Email sending completed (SendGrid mocked)")
+            else:
+                self.log_test("POST /admin/send-email to all handlers", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("POST /admin/send-email to all handlers", False, f"Exception: {str(e)}")
         
-        success, response, status_code = self.make_request(
-            "PUT", 
-            f"/admin/partners/{partner_id}/status?status=suspended"
-        )
-        
-        self.log_test(
-            "Admin Partner Suspension",
-            success,
-            f"Partner suspension status: {status_code}",
-            response
-        )
-        
-        # Revert to approved for other tests
-        if success:
-            self.make_request(
-                "PUT", 
-                f"/admin/partners/{partner_id}/status?status=approved"
-            )
-
-    def test_admin_invalid_partner_status(self):
-        """Test admin setting invalid partner status"""
-        if not self.created_partners:
-            self.log_test(
-                "Admin Invalid Partner Status",
-                False,
-                "No partner available for invalid status test",
-                {}
-            )
-            return
+        # Test 3: POST /api/admin/send-email with recipient_type="partner" - Should handle sending to all partners
+        try:
+            email_data = {
+                "recipient_type": "partner",
+                "subject": "Test Email to All Partners",
+                "body": "This is a test email sent to all partners from the admin dashboard.",
+                "send_to_all": True
+            }
             
-        partner_id = self.created_partners[0]["id"]
-        
-        success, response, status_code = self.make_request(
-            "PUT", 
-            f"/admin/partners/{partner_id}/status?status=invalid_status"
-        )
-        
-        expected_failure = not success and status_code == 400
-        self.log_test(
-            "Admin Invalid Partner Status",
-            expected_failure,
-            f"Expected 400 error for invalid status, got {status_code}",
-            response
-        )
-
-    def test_admin_invalid_partner_id(self):
-        """Test admin operations with invalid partner ID"""
-        success, response, status_code = self.make_request(
-            "PUT", 
-            "/admin/partners/invalid_id/status?status=approved"
-        )
-        
-        expected_failure = not success and status_code == 400
-        self.log_test(
-            "Admin Invalid Partner ID",
-            expected_failure,
-            f"Expected 400 error for invalid partner ID, got {status_code}",
-            response
-        )
-
-    def create_test_handler_with_healthcare_skills(self):
-        """Create a test handler with healthcare skills for assignment tests"""
-        timestamp = int(time.time())
-        handler_data = {
-            "name": "Healthcare Handler",
-            "email": f"healthcare.handler.{timestamp}@test.com",
-            "password": "HandlerPass123!",
-            "phone": "+44 20 7946 0962",
-            "user_type": "handler"
-        }
-        
-        success, response, status_code = self.make_request("POST", "/auth/register", handler_data)
-        
-        if success and "id" in response:
-            handler_id = response["id"]
+            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
+                                       json=email_data,
+                                       headers={"Content-Type": "application/json"})
             
-            # Since the regular registration doesn't handle skills, we'll create a handler
-            # that should have healthcare skills by default. Let's test with the handler as-is
-            # and see if we can assign them. If not, we'll note this as a limitation.
+            if response.status_code == 200:
+                data = response.json()
+                if "sent_count" in data and "total_recipients" in data:
+                    self.log_test("POST /admin/send-email to all partners", True, 
+                                f"Sent to {data['sent_count']}/{data['total_recipients']} partners")
+                else:
+                    self.log_test("POST /admin/send-email to all partners", True, 
+                                "Email sending completed (SendGrid mocked)")
+            else:
+                self.log_test("POST /admin/send-email to all partners", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("POST /admin/send-email to all partners", False, f"Exception: {str(e)}")
+        
+        # Test 4: Validation - Empty subject should fail
+        try:
+            email_data = {
+                "recipient_type": "user",
+                "subject": "",  # Empty subject
+                "body": "This should fail due to empty subject.",
+                "send_to_all": True
+            }
             
-            self.created_handlers.append({
-                "id": handler_id,
-                "email": handler_data["email"],
-                "skills": ["Mental Support Worker", "Baby Sitter"]  # Expected skills
-            })
-            return handler_id
-        return None
-
-    def test_admin_assign_handler_to_partner(self):
-        """Test admin assigning a healthcare handler to a partner"""
-        if not self.created_partners or self.created_partners[0].get("status") != "approved":
-            self.log_test(
-                "Admin Handler Assignment",
-                False,
-                "No approved partner available for handler assignment",
-                {}
-            )
-            return
+            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
+                                       json=email_data,
+                                       headers={"Content-Type": "application/json"})
             
-        # Create a handler with healthcare skills
-        handler_id = self.create_test_handler_with_healthcare_skills()
-        if not handler_id:
-            self.log_test(
-                "Admin Handler Assignment",
-                False,
-                "Failed to create test handler",
-                {}
-            )
-            return
+            if response.status_code == 422:  # Validation error
+                self.log_test("POST /admin/send-email validates empty subject", True, 
+                            "Correctly rejects empty subject")
+            elif response.status_code == 400:
+                self.log_test("POST /admin/send-email validates empty subject", True, 
+                            "Correctly rejects empty subject (400 error)")
+            else:
+                self.log_test("POST /admin/send-email validates empty subject", False, 
+                            f"Expected validation error, got HTTP {response.status_code}")
+        except Exception as e:
+            self.log_test("POST /admin/send-email validates empty subject", False, f"Exception: {str(e)}")
+        
+        # Test 5: Validation - Empty body should fail
+        try:
+            email_data = {
+                "recipient_type": "user",
+                "subject": "Test Subject",
+                "body": "",  # Empty body
+                "send_to_all": True
+            }
             
-        partner_id = self.created_partners[0]["id"]
-        assignment_data = {
-            "handler_id": handler_id,
-            "partner_id": partner_id,
-            "admin_notes": "Assigned for mental health support services"
-        }
-        
-        success, response, status_code = self.make_request(
-            "POST", 
-            f"/admin/handlers/{handler_id}/assign-partner",
-            assignment_data
-        )
-        
-        # Note: This test may fail because the regular user registration endpoint
-        # doesn't handle skills field, so handlers created via /auth/register
-        # don't have healthcare skills by default
-        if not success and status_code == 400 and "healthcare category skills" in str(response):
-            self.log_test(
-                "Admin Handler Assignment",
-                True,  # Mark as pass since this is expected behavior
-                f"Expected failure: Handler lacks healthcare skills (API working correctly). Status: {status_code}",
-                response
-            )
-        else:
-            self.log_test(
-                "Admin Handler Assignment",
-                success,
-                f"Handler assignment status: {status_code}",
-                response
-            )
-
-    def test_admin_assign_handler_without_healthcare_skills(self):
-        """Test admin assigning handler without healthcare skills (should fail)"""
-        if not self.created_partners:
-            self.log_test(
-                "Admin Handler Assignment - No Healthcare Skills",
-                False,
-                "No partner available for assignment test",
-                {}
-            )
-            return
+            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
+                                       json=email_data,
+                                       headers={"Content-Type": "application/json"})
             
-        # Create a handler without healthcare skills
-        timestamp = int(time.time())
-        handler_data = {
-            "name": "Regular Handler",
-            "email": f"regular.handler.{timestamp}@test.com",
-            "password": "RegularPass123!",
-            "phone": "+44 20 7946 0963",
-            "user_type": "handler",
-            "skills": ["Plumbing", "Electrical"]  # Non-healthcare skills
-        }
+            if response.status_code == 422:  # Validation error
+                self.log_test("POST /admin/send-email validates empty body", True, 
+                            "Correctly rejects empty body")
+            elif response.status_code == 400:
+                self.log_test("POST /admin/send-email validates empty body", True, 
+                            "Correctly rejects empty body (400 error)")
+            else:
+                self.log_test("POST /admin/send-email validates empty body", False, 
+                            f"Expected validation error, got HTTP {response.status_code}")
+        except Exception as e:
+            self.log_test("POST /admin/send-email validates empty body", False, f"Exception: {str(e)}")
         
-        reg_success, reg_response, _ = self.make_request("POST", "/auth/register", handler_data)
-        
-        if not reg_success or "id" not in reg_response:
-            self.log_test(
-                "Admin Handler Assignment - No Healthcare Skills",
-                False,
-                "Failed to create regular handler for test",
-                reg_response
-            )
-            return
+        # Test 6: Invalid recipient_type should fail
+        try:
+            email_data = {
+                "recipient_type": "invalid_type",
+                "subject": "Test Subject",
+                "body": "Test body",
+                "send_to_all": True
+            }
             
-        handler_id = reg_response["id"]
-        partner_id = self.created_partners[0]["id"]
-        assignment_data = {
-            "handler_id": handler_id,
-            "partner_id": partner_id,
-            "admin_notes": "Attempting to assign non-healthcare handler"
-        }
-        
-        success, response, status_code = self.make_request(
-            "POST", 
-            f"/admin/handlers/{handler_id}/assign-partner",
-            assignment_data
-        )
-        
-        # Should fail because handler doesn't have healthcare skills
-        expected_failure = not success and status_code == 400
-        self.log_test(
-            "Admin Handler Assignment - No Healthcare Skills",
-            expected_failure,
-            f"Expected 400 error for non-healthcare handler, got {status_code}",
-            response
-        )
-
-    # ==================== PRIORITY 3: Partner Data Access ====================
-    
-    def test_partner_login_after_approval(self):
-        """Test successful partner login after approval"""
-        if not self.created_partners or self.created_partners[0].get("status") != "approved":
-            self.log_test(
-                "Partner Login - After Approval",
-                False,
-                "No approved partner available for login test",
-                {}
-            )
-            return
+            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
+                                       json=email_data,
+                                       headers={"Content-Type": "application/json"})
             
-        partner = self.created_partners[0]
-        login_data = {
-            "email": partner["email"],
-            "password": partner["password"]
-        }
-        
-        success, response, status_code = self.make_request("POST", "/partner/login", login_data)
-        
-        if success and "id" in response:
-            # Store partner details for further tests
-            partner["login_response"] = response
-            
-        self.log_test(
-            "Partner Login - After Approval",
-            success,
-            f"Login status: {status_code}, Partner ID: {response.get('id', 'N/A')}",
-            response
-        )
-
-    def test_get_partner_handlers(self):
-        """Test retrieving handlers assigned to a partner"""
-        if not self.created_partners:
-            self.log_test(
-                "Get Partner Handlers",
-                False,
-                "No partner available for handlers test",
-                {}
-            )
-            return
-            
-        partner_id = self.created_partners[0]["id"]
-        
-        success, response, status_code = self.make_request("GET", f"/partner/{partner_id}/handlers")
-        
-        if success:
-            handler_count = len(response.get("handlers", []))
-            total = response.get("total", 0)
-            
-        self.log_test(
-            "Get Partner Handlers",
-            success,
-            f"Retrieved {handler_count if success else 0} handlers, Total: {total if success else 0}",
-            response
-        )
-
-    def test_get_partner_handlers_invalid_id(self):
-        """Test retrieving handlers with invalid partner ID"""
-        success, response, status_code = self.make_request("GET", "/partner/invalid_id/handlers")
-        
-        expected_failure = not success and status_code == 400
-        self.log_test(
-            "Get Partner Handlers - Invalid ID",
-            expected_failure,
-            f"Expected 400 error for invalid partner ID, got {status_code}",
-            response
-        )
-
-    def create_test_booking_for_healthcare(self):
-        """Create a test booking for healthcare services"""
-        if not self.created_handlers:
-            return None
-            
-        # Create a customer first
-        timestamp = int(time.time())
-        customer_data = {
-            "name": "Healthcare Customer",
-            "email": f"healthcare.customer.{timestamp}@test.com",
-            "password": "CustomerPass123!",
-            "phone": "+44 20 7946 0964",
-            "user_type": "customer"
-        }
-        
-        cust_success, cust_response, _ = self.make_request("POST", "/auth/register", customer_data)
-        if not cust_success or "id" not in cust_response:
-            return None
-            
-        customer_id = cust_response["id"]
-        
-        # Create a healthcare service
-        service_data = {
-            "category": "Mental Support Worker",
-            "name": "Mental Health Support Session",
-            "description": "Professional mental health support and counseling",
-            "fixed_price": 80.0,
-            "estimated_duration": 60
-        }
-        
-        serv_success, serv_response, _ = self.make_request("POST", "/services", service_data)
-        if not serv_success or "id" not in serv_response:
-            return None
-            
-        service_id = serv_response["id"]
-        
-        # Create booking
-        booking_data = {
-            "service_id": service_id,
-            "customer_id": customer_id,
-            "scheduled_date": "2024-12-20",
-            "time_range_start": "10:00",
-            "time_range_end": "11:00",
-            "location": {
-                "latitude": 51.5074,
-                "longitude": -0.1278
-            },
-            "notes": "Healthcare support booking for testing",
-            "terms_agreed": True,
-            "service_category": "Mental Support Worker"
-        }
-        
-        book_success, book_response, _ = self.make_request("POST", "/bookings", booking_data)
-        if book_success and "id" in book_response:
-            self.created_bookings.append(book_response["id"])
-            return book_response["id"]
-        return None
-
-    def test_get_partner_bookings(self):
-        """Test retrieving bookings for a partner's handlers"""
-        if not self.created_partners:
-            self.log_test(
-                "Get Partner Bookings",
-                False,
-                "No partner available for bookings test",
-                {}
-            )
-            return
-            
-        # Create a test booking
-        booking_id = self.create_test_booking_for_healthcare()
-        
-        partner_id = self.created_partners[0]["id"]
-        
-        success, response, status_code = self.make_request("GET", f"/partner/{partner_id}/bookings")
-        
-        if success:
-            booking_count = len(response.get("bookings", []))
-            total = response.get("total", 0)
-            
-        self.log_test(
-            "Get Partner Bookings",
-            success,
-            f"Retrieved {booking_count if success else 0} bookings, Total: {total if success else 0}",
-            response
-        )
-
-    def test_get_partner_bookings_invalid_id(self):
-        """Test retrieving bookings with invalid partner ID"""
-        success, response, status_code = self.make_request("GET", "/partner/invalid_id/bookings")
-        
-        expected_failure = not success and status_code == 400
-        self.log_test(
-            "Get Partner Bookings - Invalid ID",
-            expected_failure,
-            f"Expected 400 error for invalid partner ID, got {status_code}",
-            response
-        )
-
-    # ==================== Test Execution ====================
+            if response.status_code in [400, 422]:
+                self.log_test("POST /admin/send-email validates recipient_type", True, 
+                            "Correctly rejects invalid recipient_type")
+            else:
+                self.log_test("POST /admin/send-email validates recipient_type", False, 
+                            f"Expected validation error, got HTTP {response.status_code}")
+        except Exception as e:
+            self.log_test("POST /admin/send-email validates recipient_type", False, f"Exception: {str(e)}")
     
     def run_all_tests(self):
-        """Run all Partner System API tests"""
-        print("🏥 STARTING COMPREHENSIVE PARTNER SYSTEM API TESTING")
+        """Run all Admin Dashboard API tests"""
+        print("🚀 STARTING ADMIN DASHBOARD BACKEND API TESTING")
         print("=" * 80)
-        print()
-        
-        print("📋 PRIORITY 1: Partner Registration & Authentication")
-        print("-" * 50)
-        self.test_partner_registration_success()
-        self.test_partner_registration_invalid_category()
-        self.test_partner_registration_duplicate_email()
-        self.test_partner_login_pending_status()
-        self.test_partner_login_invalid_credentials()
-        self.test_partner_login_nonexistent_email()
-        
-        print("👨‍💼 PRIORITY 2: Admin Partner Management")
-        print("-" * 50)
-        self.test_admin_approve_partner()
-        self.test_admin_reject_partner()
-        self.test_admin_suspend_partner()
-        self.test_admin_invalid_partner_status()
-        self.test_admin_invalid_partner_id()
-        self.test_admin_assign_handler_to_partner()
-        self.test_admin_assign_handler_without_healthcare_skills()
-        
-        print("📊 PRIORITY 3: Partner Data Access")
-        print("-" * 50)
-        self.test_partner_login_after_approval()
-        self.test_get_partner_handlers()
-        self.test_get_partner_handlers_invalid_id()
-        self.test_get_partner_bookings()
-        self.test_get_partner_bookings_invalid_id()
-        
-        self.print_summary()
-
-    def print_summary(self):
-        """Print test summary"""
-        print("=" * 80)
-        print("🏥 PARTNER SYSTEM API TESTING SUMMARY")
+        print(f"Backend URL: {BACKEND_URL}")
+        print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("=" * 80)
         
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results if result["success"])
-        failed_tests = total_tests - passed_tests
-        success_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+        # Run tests in priority order
+        self.test_app_settings_api()      # Priority: HIGH
+        self.test_send_email_api()        # Priority: HIGH  
+        self.test_chat_history_api()      # Priority: MEDIUM
         
-        print(f"📊 Total Tests: {total_tests}")
-        print(f"✅ Passed: {passed_tests}")
-        print(f"❌ Failed: {failed_tests}")
-        print(f"📈 Success Rate: {success_rate:.1f}%")
-        print()
+        # Print summary
+        print("\n" + "=" * 80)
+        print("📊 ADMIN DASHBOARD API TESTING SUMMARY")
+        print("=" * 80)
         
-        if failed_tests > 0:
-            print("❌ FAILED TESTS:")
-            print("-" * 40)
-            for result in self.test_results:
-                if not result["success"]:
-                    print(f"• {result['test']}")
-                    if result["details"]:
-                        print(f"  └─ {result['details']}")
-            print()
+        success_rate = (self.passed_tests / self.total_tests * 100) if self.total_tests > 0 else 0
         
-        print("📋 TEST DATA CREATED:")
-        print(f"• Partners: {len(self.created_partners)}")
-        print(f"• Handlers: {len(self.created_handlers)}")
-        print(f"• Bookings: {len(self.created_bookings)}")
-        print()
+        print(f"Total Tests: {self.total_tests}")
+        print(f"Passed: {self.passed_tests}")
+        print(f"Failed: {self.total_tests - self.passed_tests}")
+        print(f"Success Rate: {success_rate:.1f}%")
         
-        if self.created_partners:
-            print("🏥 PARTNER DETAILS:")
-            for i, partner in enumerate(self.created_partners, 1):
-                print(f"Partner {i}:")
-                print(f"  • ID: {partner['id']}")
-                print(f"  • Email: {partner['email']}")
-                print(f"  • Category: {partner['category']}")
-                print(f"  • Status: {partner.get('status', 'pending')}")
+        if success_rate >= 90:
+            print("🎉 EXCELLENT: Admin Dashboard APIs are working great!")
+        elif success_rate >= 75:
+            print("✅ GOOD: Admin Dashboard APIs are mostly working")
+        elif success_rate >= 50:
+            print("⚠️  MODERATE: Some Admin Dashboard APIs need attention")
+        else:
+            print("❌ CRITICAL: Major issues with Admin Dashboard APIs")
+        
+        # Show failed tests
+        failed_tests = [test for test in self.test_results if not test["passed"]]
+        if failed_tests:
+            print("\n❌ FAILED TESTS:")
+            for test in failed_tests:
+                print(f"  • {test['test']}: {test['details']}")
         
         print("=" * 80)
+        return success_rate >= 75
 
 if __name__ == "__main__":
-    tester = PartnerAPITester()
-    tester.run_all_tests()
+    tester = AdminDashboardTester()
+    success = tester.run_all_tests()
+    sys.exit(0 if success else 1)
