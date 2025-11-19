@@ -191,6 +191,18 @@ export default function Home() {
           />
         )}
 
+        {/* Browse All Services Button */}
+        <View style={styles.browseAllContainer}>
+          <TouchableOpacity
+            style={styles.browseAllButton}
+            onPress={() => router.push('/(customer)/advanced-search')}
+          >
+            <Ionicons name="search" size={24} color="#FFF" />
+            <Text style={styles.browseAllText}>Browse All Services</Text>
+            <Ionicons name="arrow-forward" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
