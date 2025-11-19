@@ -4,6 +4,12 @@ import {
   CreditCard, Calendar, DollarSign, Settings, Package,
   TrendingUp, TrendingDown, Activity, ChevronDown, ChevronUp
 } from 'lucide-react';
+import UsersManagement from '../components/admin/UsersManagement';
+import HandlersManagement from '../components/admin/HandlersManagement';
+import PartnersManagement from '../components/admin/PartnersManagement';
+import BookingsManagement from '../components/admin/BookingsManagement';
+import ServicesManagement from '../components/admin/ServicesManagement';
+import PaymentsManagement from '../components/admin/PaymentsManagement';
 
 export default function AdminNew() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
