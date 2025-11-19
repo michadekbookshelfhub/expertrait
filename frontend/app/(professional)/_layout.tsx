@@ -37,18 +37,9 @@ export default function ProfessionalLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'My Jobs',
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="jobs"
-        options={{
-          title: 'My Jobs',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list" size={size} color={color} />
+            <Ionicons name="grid" size={size} color={color} />
           ),
         }}
       />
@@ -62,6 +53,10 @@ export default function ProfessionalLayout() {
         }}
       />
       {/* Hide other professional screens from tab bar */}
+      <Tabs.Screen
+        name="jobs"
+        options={{ href: null }}
+      />
       <Tabs.Screen
         name="my-skills"
         options={{ href: null }}
