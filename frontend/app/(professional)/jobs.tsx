@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   filterText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#374151',
   },
