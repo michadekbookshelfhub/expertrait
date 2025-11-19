@@ -295,6 +295,117 @@ export default function Index() {
                   )}
                 </View>
               )}
+
+              {userType === 'partner' && (
+                <View style={styles.partnerFieldsContainer}>
+                  <Text style={styles.sectionTitle}>Organization Details</Text>
+                  
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Organization Name *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter organization name"
+                      value={organizationName}
+                      onChangeText={setOrganizationName}
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Company Phone *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Company phone number"
+                      value={companyPhone}
+                      onChangeText={setCompanyPhone}
+                      keyboardType="phone-pad"
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Company Address *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Company address"
+                      value={companyAddress}
+                      onChangeText={setCompanyAddress}
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Healthcare License Number *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="License number"
+                      value={licenseNumber}
+                      onChangeText={setLicenseNumber}
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Healthcare Category *</Text>
+                    <View style={styles.pickerContainer}>
+                      {healthcareCategories.map((category) => (
+                        <TouchableOpacity
+                          key={category}
+                          style={[
+                            styles.categoryChip,
+                            healthcareCategory === category && styles.categoryChipActive,
+                          ]}
+                          onPress={() => setHealthcareCategory(category)}
+                        >
+                          <Text
+                            style={[
+                              styles.categoryChipText,
+                              healthcareCategory === category && styles.categoryChipTextActive,
+                            ]}
+                          >
+                            {category}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <Text style={styles.sectionTitle}>Representative Details</Text>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Representative Full Name *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Full name of representative"
+                      value={representativeName}
+                      onChangeText={setRepresentativeName}
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Representative Address *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Representative address"
+                      value={representativeAddress}
+                      onChangeText={setRepresentativeAddress}
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Job Role *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g., Director, Manager"
+                      value={representativeJobRole}
+                      onChangeText={setRepresentativeJobRole}
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+                </View>
+              )}
             </>
           )}
 
