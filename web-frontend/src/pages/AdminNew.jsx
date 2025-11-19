@@ -40,11 +40,14 @@ export default function AdminNew() {
     { id: 'bookings', label: 'Bookings', icon: Calendar },
     { id: 'services', label: 'Services', icon: Package },
     { id: 'payments', label: 'Payments', icon: DollarSign },
+    { id: 'chat-history', label: 'Chat History', icon: Activity },
+    { id: 'send-email', label: 'Send Email', icon: CreditCard },
     { 
       id: 'settings', 
       label: 'Settings', 
       icon: Settings,
       subItems: [
+        { id: 'app-settings', label: 'App Settings' },
         { id: 'company', label: 'Company Settings' },
         { id: 'stripe', label: 'Stripe Settings' }
       ]
