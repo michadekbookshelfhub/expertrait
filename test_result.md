@@ -321,6 +321,42 @@ backend:
           agent: "testing"
           comment: "Admin Partner Management APIs testing completed successfully! ✅ PRIORITY 2 TESTS PASSED: Partner approval/rejection/suspension (PUT /admin/partners/{partner_id}/status), Handler assignment with healthcare skills validation (POST /admin/handlers/{handler_id}/assign-partner), Invalid status/ID validation (400 errors), Healthcare skills requirement enforcement. All admin workflow APIs working correctly with proper validation and email notifications **mocked**."
 
+  - task: "Admin App Settings API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Admin App Settings API testing completed successfully! ✅ GET /admin/app-settings returns all 8 required fields with correct default values (app_name='ExperTrait') ✅ PUT /admin/app-settings successfully updates and persists settings ✅ All fields tested: app_name, app_logo_url, customer_privacy_policy, customer_terms_of_use, handler_privacy_policy, handler_terms_of_use, partner_privacy_policy, partner_terms_of_use. Settings management working correctly."
+
+  - task: "Admin Chat History API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Admin Chat History API testing completed successfully! ✅ GET /admin/chat-history returns proper structure with 'chats' and 'total' fields ✅ Handles empty state correctly (returns empty list when no chats exist) ✅ Respects limit parameter correctly (tested with limits 1, 3, 5, 50) ✅ All response formats are consistent and well-structured. Chat history retrieval working correctly."
+
+  - task: "Admin Send Email API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Admin Send Email API testing completed successfully! ✅ POST /admin/send-email handles all recipient types: 'user' (14 customers), 'handler' (6 handlers), 'partner' (6 partners) ✅ Correctly rejects invalid recipient_type ✅ SendGrid integration **mocked** (emails processed but not sent due to configuration) ✅ Core functionality working correctly. Minor: Empty subject/body validation not implemented but doesn't affect core functionality."
+
 frontend:
   - task: "Authentication Flow"
     implemented: true
