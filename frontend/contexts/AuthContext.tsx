@@ -125,13 +125,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await AsyncStorage.setItem('@user', JSON.stringify(data));
   };
 
+  const partnerRegister = async (partnerData: any) => {
+    const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+    const response = await fetch(`${API_URL}/api/partner/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(partnerData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Partner registration failed');
+    }
+
+    const data = await response.json();
+    // Note: Partner will need approval, so we don't auto-login
+    // Return success message instead
+    throw new Error('Registration successful! Your account is pending approval. You will receive an email once approved.');
+  };
+
   const logout = async () => {
     setUser(null);
     await AsyncStorage.removeItem('@user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, partnerLogin, register, partnerRegister, logout }}>
       {children}
     </AuthContext.Provider>
   );
