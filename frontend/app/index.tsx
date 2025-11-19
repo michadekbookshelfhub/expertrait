@@ -685,4 +685,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  partnerFieldsContainer: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    backgroundColor: '#FFF',
+  },
+  categoryChipActive: {
+    backgroundColor: '#FF6B00',
+    borderColor: '#FF6B00',
+  },
+  categoryChipText: {
+    fontSize: 13,
+    color: '#666',
+  },
+  categoryChipTextActive: {
+    color: '#FFF',
+    fontWeight: '600',
+  },
 });
