@@ -22,7 +22,9 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  partnerLogin: (email: string, password: string) => Promise<void>;
   register: (userData: any) => Promise<void>;
+  partnerRegister: (partnerData: any) => Promise<void>;
   logout: () => Promise<void>;
 }
 
