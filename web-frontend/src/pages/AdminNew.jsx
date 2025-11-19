@@ -634,17 +634,17 @@ export default function AdminNew() {
       case 'dashboard':
         return <DashboardContent />;
       case 'users':
-        return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Users Management</h2><p className="text-gray-600 mt-2">Users management functionality coming soon...</p></div>;
+        return <UsersManagement />;
       case 'handlers':
-        return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Handlers Management</h2><p className="text-gray-600 mt-2">Handlers management functionality coming soon...</p></div>;
+        return <HandlersManagement />;
       case 'partners':
-        return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Partners Management</h2><p className="text-gray-600 mt-2">Partners management functionality coming soon...</p></div>;
+        return <PartnersManagement />;
       case 'bookings':
-        return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Bookings Management</h2><p className="text-gray-600 mt-2">Bookings management functionality coming soon...</p></div>;
+        return <BookingsManagement />;
       case 'services':
-        return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Services Management</h2><p className="text-gray-600 mt-2">Services management functionality coming soon...</p></div>;
+        return <ServicesManagement />;
       case 'payments':
-        return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-2xl font-bold">Payments Management</h2><p className="text-gray-600 mt-2">Payments management functionality coming soon...</p></div>;
+        return <PaymentsManagement />;
       case 'app-settings':
         return <AppSettingsContent />;
       case 'chat-history':
