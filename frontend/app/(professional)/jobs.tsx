@@ -2,192 +2,228 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
   RefreshControl,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext';
+import { router } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-
-interface Job {
-  id: string;
-  service_name: string;
-  service_price: number;
-  customer_name: string;
-  status: string;
-  scheduled_time: string;
-  location: any;
-}
-
-export default function Jobs() {
+export default function MyJobsNew() {
   const { user } = useAuth();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [filter, setFilter] = useState('all');
-  const [loading, setLoading] = useState(false);
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+
+  const statusFilters = [
+    { id: 'all', label: 'All', icon: 'apps', color: '#6366F1' },
+    { id: 'pending', label: 'Pending', icon: 'time', color: '#F59E0B' },
+    { id: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle', color: '#3B82F6' },
+    { id: 'in_progress', label: 'Active', icon: 'play-circle', color: '#10B981' },
+    { id: 'completed', label: 'Completed', icon: 'checkmark-done', color: '#8B5CF6' },
+  ];
 
   useEffect(() => {
     loadJobs();
-  }, [filter]);
+  }, [selectedStatus]);
 
   const loadJobs = async () => {
-    if (!user?.id) return;
-    
+    setLoading(true);
     try {
-      setLoading(true);
-      const statusParam = filter === 'all' ? '' : `?status=${filter}`;
-      const response = await fetch(
-        `${API_URL}/api/professionals/${user.id}/jobs${statusParam}`
-      );
+      const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+      const url = selectedStatus === 'all' 
+        ? `${BACKEND_URL}/api/bookings/professional/${user?.id}`
+        : `${BACKEND_URL}/api/professionals/${user?.id}/jobs?status=${selectedStatus}`;
       
-      if (response.ok) {
-        const data = await response.json();
-        setJobs(data.jobs);
-      }
+      const response = await fetch(url);
+      const data = await response.json();
+      setJobs(data.bookings || data.jobs || []);
     } catch (error) {
-      console.error('Failed to load jobs:', error);
+      console.error('Error loading jobs:', error);
+      setJobs([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const updateJobStatus = async (jobId: string, newStatus: string) => {
-    try {
-      const response = await fetch(
-        `${API_URL}/api/professionals/${user?.id}/jobs/${jobId}/status?status=${newStatus}`,
-        { method: 'PUT' }
-      );
-      
-      if (response.ok) {
-        Alert.alert('Success', 'Job status updated');
-        loadJobs();
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update job status');
-    }
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadJobs();
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: any = {
-      pending: '#FFA500',
-      confirmed: '#2196F3',
-      in_progress: '#9C27B0',
-      completed: '#4CAF50',
-      cancelled: '#F44336',
+  const getStatusBadgeStyle = (status) => {
+    const colors = {
+      pending: { bg: '#FEF3C7', text: '#92400E', icon: '#F59E0B' },
+      confirmed: { bg: '#DBEAFE', text: '#1E40AF', icon: '#3B82F6' },
+      in_progress: { bg: '#D1FAE5', text: '#065F46', icon: '#10B981' },
+      completed: { bg: '#E9D5FF', text: '#6B21A8', icon: '#8B5CF6' },
+      cancelled: { bg: '#FEE2E2', text: '#991B1B', icon: '#EF4444' },
     };
-    return colors[status] || '#999';
+    return colors[status] || colors.pending;
   };
 
-  const renderJob = (job: Job) => (
-    <View key={job.id} style={styles.jobCard}>
-      <View style={styles.jobHeader}>
-        <View style={styles.jobInfo}>
-          <Text style={styles.serviceName}>{job.service_name}</Text>
-          <Text style={styles.customerName}>{job.customer_name}</Text>
-          <Text style={styles.scheduledTime}>
-            {new Date(job.scheduled_time).toLocaleString()}
-          </Text>
-        </View>
-        <View style={styles.priceContainer}>
-          <Text style={styles.price}>${job.service_price}</Text>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: getStatusColor(job.status) },
-            ]}
-          >
-            <Text style={styles.statusText}>{job.status}</Text>
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const renderJobCard = (job) => {
+    const statusStyle = getStatusBadgeStyle(job.status);
+    
+    return (
+      <TouchableOpacity
+        key={job.id}
+        style={styles.jobCard}
+        onPress={() => router.push(`/(professional)/job-detail?id=${job.id}`)}
+        activeOpacity={0.7}
+      >
+        {/* Card Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.headerLeft}>
+            <View style={[styles.iconCircle, { backgroundColor: statusStyle.icon + '20' }]}>
+              <Ionicons name="briefcase" size={20} color={statusStyle.icon} />
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.jobTitle} numberOfLines={1}>
+                {job.service_name || 'Service'}
+              </Text>
+              <Text style={styles.jobId}>#{job.id?.slice(-6)}</Text>
+            </View>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.statusText, { color: statusStyle.text }]}>
+              {job.status.replace('_', ' ')}
+            </Text>
           </View>
         </View>
-      </View>
 
-      {job.status === 'pending' && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.confirmButton]}
-            onPress={() => updateJobStatus(job.id, 'confirmed')}
-          >
-            <Text style={styles.actionButtonText}>Confirm</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            onPress={() => updateJobStatus(job.id, 'cancelled')}
-          >
-            <Text style={styles.actionButtonText}>Decline</Text>
+        {/* Card Body */}
+        <View style={styles.cardBody}>
+          {/* Customer Info */}
+          <View style={styles.infoRow}>
+            <Ionicons name="person-outline" size={16} color="#6B7280" />
+            <Text style={styles.infoText}>{job.customer_name || 'Customer'}</Text>
+          </View>
+
+          {/* Date & Time */}
+          <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+            <Text style={styles.infoText}>
+              {formatDate(job.service_date)} at {formatTime(job.service_date)}
+            </Text>
+          </View>
+
+          {/* Location */}
+          <View style={styles.infoRow}>
+            <Ionicons name="location-outline" size={16} color="#6B7280" />
+            <Text style={styles.infoText} numberOfLines={1}>
+              {job.address || 'Location not specified'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Card Footer */}
+        <View style={styles.cardFooter}>
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceLabel}>Payment</Text>
+            <Text style={styles.priceAmount}>£{job.price || '0.00'}</Text>
+          </View>
+          <TouchableOpacity style={styles.viewButton}>
+            <Text style={styles.viewButtonText}>View Details</Text>
+            <Ionicons name="arrow-forward" size={16} color="#4CAF50" />
           </TouchableOpacity>
         </View>
-      )}
-
-      {job.status === 'confirmed' && (
-        <TouchableOpacity
-          style={[styles.actionButton, styles.startButton]}
-          onPress={() => updateJobStatus(job.id, 'in_progress')}
-        >
-          <Text style={styles.actionButtonText}>Start Job</Text>
-        </TouchableOpacity>
-      )}
-
-      {job.status === 'in_progress' && (
-        <TouchableOpacity
-          style={[styles.actionButton, styles.completeButton]}
-          onPress={() => updateJobStatus(job.id, 'completed')}
-        >
-          <Text style={styles.actionButtonText}>Mark Complete</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Jobs</Text>
-        <Text style={styles.headerSubtitle}>{jobs.length} jobs</Text>
+        <View>
+          <Text style={styles.headerTitle}>My Jobs</Text>
+          <Text style={styles.headerSubtitle}>
+            {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'} found
+          </Text>
+        </View>
       </View>
 
+      {/* Status Filters */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
+        style={styles.filtersContainer}
+        contentContainerStyle={styles.filtersContent}
       >
-        {['all', 'pending', 'confirmed', 'in_progress', 'completed'].map((f) => (
+        {statusFilters.map((filter) => (
           <TouchableOpacity
-            key={f}
+            key={filter.id}
             style={[
               styles.filterChip,
-              filter === f && styles.filterChipActive,
+              selectedStatus === filter.id && {
+                backgroundColor: filter.color,
+                borderColor: filter.color,
+              },
             ]}
-            onPress={() => setFilter(f)}
+            onPress={() => setSelectedStatus(filter.id)}
+            activeOpacity={0.7}
           >
+            <Ionicons
+              name={filter.icon}
+              size={18}
+              color={selectedStatus === filter.id ? '#FFF' : filter.color}
+            />
             <Text
               style={[
                 styles.filterText,
-                filter === f && styles.filterTextActive,
+                selectedStatus === filter.id && styles.filterTextActive,
               ]}
             >
-              {f.replace('_', ' ')}
+              {filter.label}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
+      {/* Jobs List */}
       <ScrollView
         style={styles.content}
+        contentContainerStyle={styles.contentContainer}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadJobs} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4CAF50']} />
         }
       >
-        {jobs.length === 0 ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.loadingText}>Loading jobs...</Text>
+          </View>
+        ) : jobs.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="briefcase-outline" size={64} color="#CCC" />
-            <Text style={styles.emptyText}>No jobs found</Text>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="briefcase-outline" size={48} color="#9CA3AF" />
+            </View>
+            <Text style={styles.emptyTitle}>No Jobs Found</Text>
+            <Text style={styles.emptyText}>
+              {selectedStatus === 'all'
+                ? "You don't have any jobs yet"
+                : `No ${selectedStatus.replace('_', ' ')} jobs at the moment`}
+            </Text>
           </View>
         ) : (
-          jobs.map(renderJob)
+          jobs.map((job) => renderJobCard(job))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -197,147 +233,204 @@ export default function Jobs() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F9FAFB',
   },
   header: {
-    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#111827',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: '#6B7280',
+    marginTop: 2,
   },
-  filterContainer: {
-    padding: 16,
-    paddingBottom: 20,
+  filtersContainer: {
     backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  filtersContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
   },
   filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 3,
-    backgroundColor: '#FFF',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterChipActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    marginRight: 8,
   },
   filterText: {
-    fontSize: 12,
-    color: '#333',
-    textTransform: 'capitalize',
+    fontSize: 14,
     fontWeight: '600',
+    color: '#374151',
   },
   filterTextActive: {
     color: '#FFF',
-    fontWeight: 'bold',
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
   },
   jobCard: {
     backgroundColor: '#FFF',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
   },
-  jobHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 12,
   },
-  jobInfo: {
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  serviceName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  customerName: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+  headerText: {
+    flex: 1,
   },
-  scheduledTime: {
+  jobTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  jobId: {
     fontSize: 12,
-    color: '#999',
-  },
-  priceContainer: {
-    alignItems: 'flex-end',
-  },
-  price: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B00',
-    marginBottom: 8,
+    color: '#9CA3AF',
+    marginTop: 2,
   },
   statusBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   statusText: {
-    color: '#FFF',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
     textTransform: 'capitalize',
   },
-  actions: {
-    flexDirection: 'row',
+  cardBody: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     gap: 8,
   },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+  infoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
-  confirmButton: {
-    backgroundColor: '#4CAF50',
+  infoText: {
+    fontSize: 14,
+    color: '#4B5563',
+    flex: 1,
   },
-  cancelButton: {
-    backgroundColor: '#F44336',
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#F9FAFB',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
-  startButton: {
-    backgroundColor: '#9C27B0',
+  priceContainer: {
+    gap: 2,
   },
-  completeButton: {
-    backgroundColor: '#4CAF50',
+  priceLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500',
   },
-  actionButtonText: {
-    color: '#FFF',
+  priceAmount: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#10B981',
   },
-  emptyContainer: {
+  viewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
+  },
+  viewButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
   },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 16,
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });
