@@ -146,6 +146,35 @@ export default function Bookings() {
           <Text style={styles.payButtonText}>Pay Now</Text>
         </TouchableOpacity>
       )}
+
+      {item.status === 'completed' && (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.reviewButton}
+            onPress={() => router.push({
+              pathname: '/(customer)/review-booking',
+              params: { 
+                bookingId: item.id,
+                handlerId: (item as any).handler_id || '',
+                handlerName: (item as any).handler_name || 'Handler'
+              }
+            })}
+          >
+            <Ionicons name="star" size={16} color="#FFF" />
+            <Text style={styles.reviewButtonText}>Leave Review</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.photosButton}
+            onPress={() => router.push({
+              pathname: '/(customer)/booking-photos',
+              params: { bookingId: item.id }
+            })}
+          >
+            <Ionicons name="images" size={16} color="#FF6B00" />
+            <Text style={styles.photosButtonText}>View Photos</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
