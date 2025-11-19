@@ -129,22 +129,25 @@ export default function Home() {
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
+      <TouchableOpacity 
+        style={styles.searchContainer}
+        onPress={handleSearchFocus}
+        activeOpacity={0.8}
+      >
         <Ionicons
           name="search"
           size={20}
           color="#999"
           style={styles.searchIcon}
         />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search services..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearchSubmit}
-          returnKeyType="search"
-        />
-      </View>
+        <Text style={styles.searchPlaceholder}>Search services...</Text>
+        <TouchableOpacity
+          style={styles.advancedSearchButton}
+          onPress={() => router.push('/(customer)/advanced-search')}
+        >
+          <Ionicons name="options" size={20} color="#FF6B00" />
+        </TouchableOpacity>
+      </TouchableOpacity>
 
       <ScrollView 
         style={styles.scrollView}
