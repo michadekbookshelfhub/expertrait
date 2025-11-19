@@ -183,7 +183,7 @@ export default function HandlerReviewsScreen() {
             </Text>
           </View>
         ) : (
-          reviews.map((review) => (
+          filteredReviews.map((review) => (
             <View key={review.id} style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
                 <View style={styles.customerAvatar}>
