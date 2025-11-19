@@ -102,6 +102,7 @@ function PagesContent() {
         <Routes>
             {/* Standalone pages (no layout) */}
             <Route path="/Admin" element={<Admin />} />
+            <Route path="/admin-dashboard" element={<AdminNew />} />
             <Route path="/partner-login" element={<PartnerLogin />} />
             <Route path="/partner-dashboard" element={<PartnerDashboard />} />
             
