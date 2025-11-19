@@ -1564,16 +1564,51 @@ async def get_category_icons():
 
 @api_router.get("/admin/stats")
 async def get_admin_stats():
-    """Get platform statistics"""
+    """Get comprehensive platform statistics"""
+    from datetime import timedelta
+    
+    now = datetime.utcnow()
+    today_start = datetime(now.year, now.month, now.day)
+    week_start = now - timedelta(days=7)
+    month_start = now - timedelta(days=30)
+    year_start = datetime(now.year, 1, 1)
+    
+    # Users Statistics
     total_users = await db.users.count_documents({})
     total_customers = await db.users.count_documents({"user_type": "customer"})
     total_handlers = await db.users.count_documents({"user_type": "handler"})
-    total_services = await db.services.count_documents({})
+    new_users_7days = await db.users.count_documents({"created_at": {"$gte": week_start}})
+    new_users_30days = await db.users.count_documents({"created_at": {"$gte": month_start}})
+    
+    # Handlers Statistics
+    new_handlers_7days = await db.users.count_documents({
+        "user_type": "handler", 
+        "created_at": {"$gte": week_start}
+    })
+    new_handlers_30days = await db.users.count_documents({
+        "user_type": "handler",
+        "created_at": {"$gte": month_start}
+    })
+    
+    # Partners Statistics
+    total_partners = await db.partners.count_documents({})
+    new_partners_7days = await db.partners.count_documents({"created_at": {"$gte": week_start}})
+    new_partners_30days = await db.partners.count_documents({"created_at": {"$gte": month_start}})
+    approved_partners = await db.partners.count_documents({"status": "approved"})
+    pending_partners = await db.partners.count_documents({"status": "pending"})
+    
+    # Bookings Statistics
     total_bookings = await db.bookings.count_documents({})
+    bookings_yearly = await db.bookings.count_documents({"created_at": {"$gte": year_start}})
+    bookings_monthly = await db.bookings.count_documents({"created_at": {"$gte": month_start}})
+    bookings_weekly = await db.bookings.count_documents({"created_at": {"$gte": week_start}})
+    bookings_today = await db.bookings.count_documents({"created_at": {"$gte": today_start}})
+    
     pending_bookings = await db.bookings.count_documents({"status": "pending"})
+    active_bookings = await db.bookings.count_documents({"status": "active"})
     completed_bookings = await db.bookings.count_documents({"status": "completed"})
     
-    # Calculate total revenue
+    # Revenue Statistics (from completed bookings)
     revenue_pipeline = [
         {"$match": {"status": "completed"}},
         {"$lookup": {
@@ -1592,16 +1627,117 @@ async def get_admin_stats():
     revenue_result = await db.bookings.aggregate(revenue_pipeline).to_list(1)
     total_revenue = revenue_result[0]["total"] if revenue_result else 0
     
+    # Daily earnings (today)
+    daily_revenue_pipeline = [
+        {"$match": {"status": "completed", "created_at": {"$gte": today_start}}},
+        {"$lookup": {
+            "from": "services",
+            "localField": "service_id",
+            "foreignField": "_id",
+            "as": "service"
+        }},
+        {"$unwind": "$service"},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": "$service.fixed_price"}
+        }}
+    ]
+    
+    daily_revenue_result = await db.bookings.aggregate(daily_revenue_pipeline).to_list(1)
+    daily_earnings = daily_revenue_result[0]["total"] if daily_revenue_result else 0
+    
+    # Weekly earnings
+    weekly_revenue_pipeline = [
+        {"$match": {"status": "completed", "created_at": {"$gte": week_start}}},
+        {"$lookup": {
+            "from": "services",
+            "localField": "service_id",
+            "foreignField": "_id",
+            "as": "service"
+        }},
+        {"$unwind": "$service"},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": "$service.fixed_price"}
+        }}
+    ]
+    
+    weekly_revenue_result = await db.bookings.aggregate(weekly_revenue_pipeline).to_list(1)
+    weekly_earnings = weekly_revenue_result[0]["total"] if weekly_revenue_result else 0
+    
+    # Payout Statistics
+    total_payouts_yearly = await db.payouts.count_documents({"created_at": {"$gte": year_start}})
+    total_payouts_monthly = await db.payouts.count_documents({"created_at": {"$gte": month_start}})
+    total_payouts_today = await db.payouts.count_documents({"created_at": {"$gte": today_start}})
+    
+    # Calculate total payout amounts
+    payout_yearly_pipeline = [
+        {"$match": {"created_at": {"$gte": year_start}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    payout_yearly_result = await db.payouts.aggregate(payout_yearly_pipeline).to_list(1)
+    payout_amount_yearly = payout_yearly_result[0]["total"] if payout_yearly_result else 0
+    
+    payout_monthly_pipeline = [
+        {"$match": {"created_at": {"$gte": month_start}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    payout_monthly_result = await db.payouts.aggregate(payout_monthly_pipeline).to_list(1)
+    payout_amount_monthly = payout_monthly_result[0]["total"] if payout_monthly_result else 0
+    
+    payout_today_pipeline = [
+        {"$match": {"created_at": {"$gte": today_start}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    payout_today_result = await db.payouts.aggregate(payout_today_pipeline).to_list(1)
+    payout_amount_today = payout_today_result[0]["total"] if payout_today_result else 0
+    
+    total_services = await db.services.count_documents({})
+    
     return {
-        "stats": {
-            "total_users": total_users,
+        "users": {
+            "total": total_users,
             "total_customers": total_customers,
-            "total_handlers": total_handlers,
-            "total_services": total_services,
-            "total_bookings": total_bookings,
-            "pending_bookings": pending_bookings,
-            "completed_bookings": completed_bookings,
-            "total_revenue": total_revenue,
+            "new_7days": new_users_7days,
+            "new_30days": new_users_30days
+        },
+        "handlers": {
+            "total": total_handlers,
+            "new_7days": new_handlers_7days,
+            "new_30days": new_handlers_30days
+        },
+        "partners": {
+            "total": total_partners,
+            "approved": approved_partners,
+            "pending": pending_partners,
+            "new_7days": new_partners_7days,
+            "new_30days": new_partners_30days
+        },
+        "bookings": {
+            "total": total_bookings,
+            "yearly": bookings_yearly,
+            "monthly": bookings_monthly,
+            "weekly": bookings_weekly,
+            "today": bookings_today,
+            "pending": pending_bookings,
+            "active": active_bookings,
+            "completed": completed_bookings
+        },
+        "revenue": {
+            "total": total_revenue,
+            "daily": daily_earnings,
+            "weekly": weekly_earnings
+        },
+        "payouts": {
+            "count_yearly": total_payouts_yearly,
+            "count_monthly": total_payouts_monthly,
+            "count_today": total_payouts_today,
+            "amount_yearly": payout_amount_yearly,
+            "amount_monthly": payout_amount_monthly,
+            "amount_today": payout_amount_today
+        },
+        "services": {
+            "total": total_services
         }
     }
 
