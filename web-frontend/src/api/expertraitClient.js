@@ -1,5 +1,5 @@
 // ExperTrait Backend Client
-const API_URL = 'https://ondemand-care.preview.emergentagent.com/api';
+const API_URL = 'https://skill-nexus-24.preview.emergentagent.com/api';
 
 export const expertraitClient = {
   // Services

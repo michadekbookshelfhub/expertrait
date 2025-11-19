@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://ondemand-care.preview.emergentagent.com/api"
+BASE_URL = "https://skill-nexus-24.preview.emergentagent.com/api"
 HEALTHCARE_CATEGORIES = [
     "Baby Sitter",
     "Dog Sitter", 
