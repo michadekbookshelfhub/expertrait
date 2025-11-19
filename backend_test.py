@@ -18,396 +18,479 @@ TIMEOUT = 30
 
 class SearchAPITester:
     def __init__(self):
-        self.session = requests.Session()
-        self.test_results = []
+        self.results = []
         self.total_tests = 0
         self.passed_tests = 0
+        self.failed_tests = 0
         
-    def log_test(self, test_name, passed, details=""):
+    def log_result(self, test_name: str, passed: bool, message: str, details: Optional[Dict] = None):
         """Log test result"""
         self.total_tests += 1
         if passed:
             self.passed_tests += 1
             status = "✅ PASS"
         else:
+            self.failed_tests += 1
             status = "❌ FAIL"
-        
-        result = f"{status}: {test_name}"
-        if details:
-            result += f" - {details}"
-        
-        print(result)
-        self.test_results.append({
+            
+        result = {
             "test": test_name,
-            "passed": passed,
-            "details": details
-        })
+            "status": status,
+            "message": message,
+            "details": details or {}
+        }
+        self.results.append(result)
+        print(f"{status}: {test_name} - {message}")
+        if details and not passed:
+            print(f"   Details: {details}")
     
-    def test_app_settings_api(self):
-        """Test App Settings API (Priority: HIGH)"""
-        print("\n🔧 TESTING APP SETTINGS API (Priority: HIGH)")
-        print("=" * 60)
-        
-        # Test 1: GET /api/admin/app-settings - Should return default settings
+    def make_request(self, endpoint: str, method: str = "GET", params: Optional[Dict] = None) -> Optional[Dict]:
+        """Make HTTP request to backend"""
+        url = f"{BACKEND_URL}{endpoint}"
         try:
-            response = self.session.get(f"{BACKEND_URL}/admin/app-settings")
+            if method == "GET":
+                response = requests.get(url, params=params, timeout=TIMEOUT)
+            else:
+                response = requests.request(method, url, params=params, timeout=TIMEOUT)
             
             if response.status_code == 200:
-                data = response.json()
-                required_fields = [
-                    "app_name", "app_logo_url", "customer_privacy_policy", 
-                    "customer_terms_of_use", "handler_privacy_policy", 
-                    "handler_terms_of_use", "partner_privacy_policy", 
-                    "partner_terms_of_use"
-                ]
-                
-                missing_fields = [field for field in required_fields if field not in data]
-                if not missing_fields:
-                    self.log_test("GET /admin/app-settings returns all required fields", True, 
-                                f"All 8 required fields present: {', '.join(required_fields)}")
-                else:
-                    self.log_test("GET /admin/app-settings returns all required fields", False, 
-                                f"Missing fields: {missing_fields}")
-                
-                # Check default values
-                if data.get("app_name") == "ExperTrait":
-                    self.log_test("GET /admin/app-settings returns correct default app_name", True, 
-                                "app_name = 'ExperTrait'")
-                else:
-                    self.log_test("GET /admin/app-settings returns correct default app_name", False, 
-                                f"Expected 'ExperTrait', got '{data.get('app_name')}'")
+                return response.json()
             else:
-                self.log_test("GET /admin/app-settings", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("GET /admin/app-settings", False, f"Exception: {str(e)}")
-        
-        # Test 2: PUT /api/admin/app-settings - Should save/update settings
-        try:
-            test_settings = {
-                "app_name": "ExperTrait Updated",
-                "app_logo_url": "/test-logo.svg",
-                "customer_privacy_policy": "Updated customer privacy policy for testing",
-                "customer_terms_of_use": "Updated customer terms for testing",
-                "handler_privacy_policy": "Updated handler privacy policy for testing",
-                "handler_terms_of_use": "Updated handler terms for testing",
-                "partner_privacy_policy": "Updated partner privacy policy for testing",
-                "partner_terms_of_use": "Updated partner terms for testing"
+                return {
+                    "error": True,
+                    "status_code": response.status_code,
+                    "message": response.text
+                }
+        except requests.exceptions.RequestException as e:
+            return {
+                "error": True,
+                "message": f"Request failed: {str(e)}"
             }
-            
-            response = self.session.put(f"{BACKEND_URL}/admin/app-settings", 
-                                      json=test_settings,
-                                      headers={"Content-Type": "application/json"})
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "message" in data and "updated_fields" in data:
-                    self.log_test("PUT /admin/app-settings updates settings", True, 
-                                f"Updated {len(data['updated_fields'])} fields")
-                else:
-                    self.log_test("PUT /admin/app-settings updates settings", False, 
-                                f"Unexpected response format: {data}")
-            else:
-                self.log_test("PUT /admin/app-settings updates settings", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("PUT /admin/app-settings updates settings", False, f"Exception: {str(e)}")
-        
-        # Test 3: Verify settings were saved by getting them again
-        try:
-            response = self.session.get(f"{BACKEND_URL}/admin/app-settings")
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("app_name") == "ExperTrait Updated":
-                    self.log_test("PUT /admin/app-settings persists changes", True, 
-                                "Settings successfully saved and retrieved")
-                else:
-                    self.log_test("PUT /admin/app-settings persists changes", False, 
-                                f"Expected 'ExperTrait Updated', got '{data.get('app_name')}'")
-            else:
-                self.log_test("PUT /admin/app-settings persists changes", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("PUT /admin/app-settings persists changes", False, f"Exception: {str(e)}")
     
-    def test_chat_history_api(self):
-        """Test Chat History API (Priority: MEDIUM)"""
-        print("\n💬 TESTING CHAT HISTORY API (Priority: MEDIUM)")
-        print("=" * 60)
+    def test_services_endpoint(self):
+        """PRIORITY 1: Test GET /api/services endpoint"""
+        print("\n🔍 PRIORITY 1 - CORE SEARCH APIs")
+        print("=" * 50)
         
-        # Test 1: GET /api/admin/chat-history - Should return empty list if no chats
-        try:
-            response = self.session.get(f"{BACKEND_URL}/admin/chat-history")
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "chats" in data and "total" in data:
-                    self.log_test("GET /admin/chat-history returns proper structure", True, 
-                                f"Found {data['total']} chats")
+        # Test 1: Basic services retrieval
+        response = self.make_request("/services")
+        
+        if response and "error" not in response:
+            if isinstance(response, list):
+                services_count = len(response)
+                self.log_result(
+                    "GET /api/services - Basic Retrieval",
+                    True,
+                    f"Successfully retrieved {services_count} services",
+                    {"count": services_count}
+                )
+                
+                # Test service data structure
+                if services_count > 0:
+                    sample_service = response[0]
+                    required_fields = ["id", "name", "description", "category", "fixed_price"]
+                    missing_fields = [field for field in required_fields if field not in sample_service]
                     
-                    # Check if it's empty or has data
-                    if data["total"] == 0:
-                        self.log_test("GET /admin/chat-history handles empty state", True, 
-                                    "Returns empty list when no chats exist")
+                    if not missing_fields:
+                        self.log_result(
+                            "Services Data Structure",
+                            True,
+                            "All required fields present in services",
+                            {"sample_fields": list(sample_service.keys())}
+                        )
                     else:
-                        self.log_test("GET /admin/chat-history returns chat data", True, 
-                                    f"Found {data['total']} chat messages")
+                        self.log_result(
+                            "Services Data Structure",
+                            False,
+                            f"Missing required fields: {missing_fields}",
+                            {"sample_service": sample_service}
+                        )
                 else:
-                    self.log_test("GET /admin/chat-history returns proper structure", False, 
-                                f"Missing 'chats' or 'total' field: {data}")
+                    self.log_result(
+                        "Services Data Structure",
+                        False,
+                        "No services found to validate structure"
+                    )
+                    
+                return response
             else:
-                self.log_test("GET /admin/chat-history", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("GET /admin/chat-history", False, f"Exception: {str(e)}")
+                self.log_result(
+                    "GET /api/services - Basic Retrieval",
+                    False,
+                    "Response is not a list",
+                    {"response_type": type(response).__name__}
+                )
+        else:
+            error_msg = response.get("message", "Unknown error") if response else "No response"
+            self.log_result(
+                "GET /api/services - Basic Retrieval",
+                False,
+                f"API call failed: {error_msg}",
+                response
+            )
         
-        # Test 2: GET /api/admin/chat-history?limit=10 - Should respect limit parameter
-        try:
-            response = self.session.get(f"{BACKEND_URL}/admin/chat-history?limit=5")
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "chats" in data:
-                    chat_count = len(data["chats"])
-                    if chat_count <= 5:
-                        self.log_test("GET /admin/chat-history respects limit parameter", True, 
-                                    f"Returned {chat_count} chats (limit=5)")
-                    else:
-                        self.log_test("GET /admin/chat-history respects limit parameter", False, 
-                                    f"Returned {chat_count} chats, expected ≤5")
-                else:
-                    self.log_test("GET /admin/chat-history respects limit parameter", False, 
-                                "Missing 'chats' field in response")
-            else:
-                self.log_test("GET /admin/chat-history with limit", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("GET /admin/chat-history with limit", False, f"Exception: {str(e)}")
-        
-        # Test 3: Test with different limit values
-        for limit in [1, 3, 50]:
-            try:
-                response = self.session.get(f"{BACKEND_URL}/admin/chat-history?limit={limit}")
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    chat_count = len(data.get("chats", []))
-                    if chat_count <= limit:
-                        self.log_test(f"GET /admin/chat-history limit={limit}", True, 
-                                    f"Returned {chat_count} chats")
-                    else:
-                        self.log_test(f"GET /admin/chat-history limit={limit}", False, 
-                                    f"Returned {chat_count} chats, expected ≤{limit}")
-                else:
-                    self.log_test(f"GET /admin/chat-history limit={limit}", False, 
-                                f"HTTP {response.status_code}")
-            except Exception as e:
-                self.log_test(f"GET /admin/chat-history limit={limit}", False, f"Exception: {str(e)}")
+        return None
     
-    def test_send_email_api(self):
-        """Test Send Email API (Priority: HIGH)"""
-        print("\n📧 TESTING SEND EMAIL API (Priority: HIGH)")
-        print("=" * 60)
+    def test_categories_endpoint(self):
+        """PRIORITY 1: Test GET /api/categories endpoint"""
+        # Note: Backend has /api/categories but returns {"categories": [...]}
+        response = self.make_request("/categories")
         
-        # Test 1: POST /api/admin/send-email with recipient_type="user" - Should handle sending to all customers
-        try:
-            email_data = {
-                "recipient_type": "user",
-                "subject": "Test Email to All Customers",
-                "body": "This is a test email sent to all customers from the admin dashboard.",
-                "send_to_all": True
-            }
-            
-            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
-                                       json=email_data,
-                                       headers={"Content-Type": "application/json"})
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "sent_count" in data and "total_recipients" in data:
-                    self.log_test("POST /admin/send-email to all customers", True, 
-                                f"Sent to {data['sent_count']}/{data['total_recipients']} customers")
+        if response and "error" not in response:
+            if "categories" in response and isinstance(response["categories"], list):
+                categories_count = len(response["categories"])
+                self.log_result(
+                    "GET /api/categories - Categories List",
+                    True,
+                    f"Successfully retrieved {categories_count} categories",
+                    {"categories": response["categories"]}
+                )
+                return response["categories"]
+            else:
+                self.log_result(
+                    "GET /api/categories - Categories List",
+                    False,
+                    "Invalid response format - expected {'categories': [...]}"
+                )
+        else:
+            error_msg = response.get("message", "Unknown error") if response else "No response"
+            self.log_result(
+                "GET /api/categories - Categories List",
+                False,
+                f"API call failed: {error_msg}",
+                response
+            )
+        
+        return None
+    
+    def test_handlers_endpoint(self):
+        """PRIORITY 1: Test GET /api/handlers endpoint"""
+        response = self.make_request("/handlers")
+        
+        if response and "error" not in response:
+            if isinstance(response, list):
+                handlers_count = len(response)
+                self.log_result(
+                    "GET /api/handlers - Basic Retrieval",
+                    True,
+                    f"Successfully retrieved {handlers_count} handlers",
+                    {"count": handlers_count}
+                )
+                
+                # Test handler data structure
+                if handlers_count > 0:
+                    sample_handler = response[0]
+                    required_fields = ["id", "name", "rating", "skills", "available"]
+                    missing_fields = [field for field in required_fields if field not in sample_handler]
+                    
+                    if not missing_fields:
+                        self.log_result(
+                            "Handlers Data Structure",
+                            True,
+                            "All required fields present in handlers",
+                            {"sample_fields": list(sample_handler.keys())}
+                        )
+                    else:
+                        self.log_result(
+                            "Handlers Data Structure",
+                            False,
+                            f"Missing required fields: {missing_fields}",
+                            {"sample_handler": sample_handler}
+                        )
                 else:
-                    self.log_test("POST /admin/send-email to all customers", True, 
-                                "Email sending completed (SendGrid mocked)")
+                    self.log_result(
+                        "Handlers Data Structure",
+                        False,
+                        "No handlers found to validate structure"
+                    )
+                    
+                return response
             else:
-                self.log_test("POST /admin/send-email to all customers", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("POST /admin/send-email to all customers", False, f"Exception: {str(e)}")
+                self.log_result(
+                    "GET /api/handlers - Basic Retrieval",
+                    False,
+                    "Response is not a list",
+                    {"response_type": type(response).__name__}
+                )
+        else:
+            error_msg = response.get("message", "Unknown error") if response else "No response"
+            self.log_result(
+                "GET /api/handlers - Basic Retrieval",
+                False,
+                f"API call failed: {error_msg}",
+                response
+            )
         
-        # Test 2: POST /api/admin/send-email with recipient_type="handler" - Should handle sending to all handlers
-        try:
-            email_data = {
-                "recipient_type": "handler",
-                "subject": "Test Email to All Handlers",
-                "body": "This is a test email sent to all handlers from the admin dashboard.",
-                "send_to_all": True
-            }
-            
-            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
-                                       json=email_data,
-                                       headers={"Content-Type": "application/json"})
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "sent_count" in data and "total_recipients" in data:
-                    self.log_test("POST /admin/send-email to all handlers", True, 
-                                f"Sent to {data['sent_count']}/{data['total_recipients']} handlers")
+        return None
+    
+    def test_category_filtering(self, categories: List[str]):
+        """PRIORITY 2: Test category filtering"""
+        print("\n🔍 PRIORITY 2 - SEARCH FILTERING")
+        print("=" * 50)
+        
+        if not categories:
+            self.log_result(
+                "Category Filtering Test",
+                False,
+                "No categories available for filtering test"
+            )
+            return
+        
+        # Test filtering with first available category
+        test_category = categories[0]
+        response = self.make_request("/services", params={"category": test_category})
+        
+        if response and "error" not in response:
+            if isinstance(response, list):
+                filtered_count = len(response)
+                
+                # Verify all returned services belong to the requested category
+                category_match = all(service.get("category") == test_category for service in response)
+                
+                if category_match:
+                    self.log_result(
+                        f"Category Filtering - {test_category}",
+                        True,
+                        f"Successfully filtered {filtered_count} services for category '{test_category}'",
+                        {"category": test_category, "count": filtered_count}
+                    )
                 else:
-                    self.log_test("POST /admin/send-email to all handlers", True, 
-                                "Email sending completed (SendGrid mocked)")
+                    mismatched = [s.get("category") for s in response if s.get("category") != test_category]
+                    self.log_result(
+                        f"Category Filtering - {test_category}",
+                        False,
+                        f"Some services don't match requested category",
+                        {"requested": test_category, "found_categories": mismatched}
+                    )
             else:
-                self.log_test("POST /admin/send-email to all handlers", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("POST /admin/send-email to all handlers", False, f"Exception: {str(e)}")
+                self.log_result(
+                    f"Category Filtering - {test_category}",
+                    False,
+                    "Response is not a list"
+                )
+        else:
+            error_msg = response.get("message", "Unknown error") if response else "No response"
+            self.log_result(
+                f"Category Filtering - {test_category}",
+                False,
+                f"API call failed: {error_msg}",
+                response
+            )
         
-        # Test 3: POST /api/admin/send-email with recipient_type="partner" - Should handle sending to all partners
-        try:
-            email_data = {
-                "recipient_type": "partner",
-                "subject": "Test Email to All Partners",
-                "body": "This is a test email sent to all partners from the admin dashboard.",
-                "send_to_all": True
-            }
-            
-            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
-                                       json=email_data,
-                                       headers={"Content-Type": "application/json"})
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "sent_count" in data and "total_recipients" in data:
-                    self.log_test("POST /admin/send-email to all partners", True, 
-                                f"Sent to {data['sent_count']}/{data['total_recipients']} partners")
-                else:
-                    self.log_test("POST /admin/send-email to all partners", True, 
-                                "Email sending completed (SendGrid mocked)")
+        # Test with invalid category
+        response = self.make_request("/services", params={"category": "NonExistentCategory"})
+        if response and "error" not in response:
+            if isinstance(response, list) and len(response) == 0:
+                self.log_result(
+                    "Invalid Category Filtering",
+                    True,
+                    "Correctly returns empty list for non-existent category"
+                )
             else:
-                self.log_test("POST /admin/send-email to all partners", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("POST /admin/send-email to all partners", False, f"Exception: {str(e)}")
+                self.log_result(
+                    "Invalid Category Filtering",
+                    False,
+                    f"Should return empty list for invalid category, got {len(response) if isinstance(response, list) else 'non-list'} items"
+                )
+    
+    def test_data_quality(self, services: List[Dict], handlers: List[Dict]):
+        """PRIORITY 3: Test data quality"""
+        print("\n🔍 PRIORITY 3 - DATA QUALITY")
+        print("=" * 50)
         
-        # Test 4: Validation - Empty subject should fail
-        try:
-            email_data = {
-                "recipient_type": "user",
-                "subject": "",  # Empty subject
-                "body": "This should fail due to empty subject.",
-                "send_to_all": True
-            }
+        if not services:
+            self.log_result(
+                "Services Data Quality",
+                False,
+                "No services available for quality testing"
+            )
+        else:
+            # Test service descriptions
+            meaningful_descriptions = 0
+            for service in services:
+                description = service.get("description", "")
+                if len(description) > 20:  # Meaningful description threshold
+                    meaningful_descriptions += 1
             
-            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
-                                       json=email_data,
-                                       headers={"Content-Type": "application/json"})
+            description_percentage = (meaningful_descriptions / len(services)) * 100
+            self.log_result(
+                "Service Descriptions Quality",
+                description_percentage >= 80,  # 80% should have meaningful descriptions
+                f"{meaningful_descriptions}/{len(services)} services ({description_percentage:.1f}%) have meaningful descriptions",
+                {"threshold": "80%", "actual": f"{description_percentage:.1f}%"}
+            )
             
-            if response.status_code == 422:  # Validation error
-                self.log_test("POST /admin/send-email validates empty subject", True, 
-                            "Correctly rejects empty subject")
-            elif response.status_code == 400:
-                self.log_test("POST /admin/send-email validates empty subject", True, 
-                            "Correctly rejects empty subject (400 error)")
-            else:
-                self.log_test("POST /admin/send-email validates empty subject", False, 
-                            f"Expected validation error, got HTTP {response.status_code}")
-        except Exception as e:
-            self.log_test("POST /admin/send-email validates empty subject", False, f"Exception: {str(e)}")
+            # Test pricing data
+            services_with_price = sum(1 for s in services if s.get("fixed_price", 0) > 0)
+            price_percentage = (services_with_price / len(services)) * 100
+            self.log_result(
+                "Service Pricing Data",
+                price_percentage >= 95,  # 95% should have valid pricing
+                f"{services_with_price}/{len(services)} services ({price_percentage:.1f}%) have valid pricing",
+                {"threshold": "95%", "actual": f"{price_percentage:.1f}%"}
+            )
         
-        # Test 5: Validation - Empty body should fail
-        try:
-            email_data = {
-                "recipient_type": "user",
-                "subject": "Test Subject",
-                "body": "",  # Empty body
-                "send_to_all": True
-            }
+        if not handlers:
+            self.log_result(
+                "Handlers Data Quality",
+                False,
+                "No handlers available for quality testing"
+            )
+        else:
+            # Test handler skills
+            handlers_with_skills = sum(1 for h in handlers if h.get("skills") and len(h.get("skills", [])) > 0)
+            skills_percentage = (handlers_with_skills / len(handlers)) * 100
+            self.log_result(
+                "Handler Skills Data",
+                skills_percentage >= 90,  # 90% should have skills
+                f"{handlers_with_skills}/{len(handlers)} handlers ({skills_percentage:.1f}%) have skills defined",
+                {"threshold": "90%", "actual": f"{skills_percentage:.1f}%"}
+            )
             
-            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
-                                       json=email_data,
-                                       headers={"Content-Type": "application/json"})
+            # Test handler ratings
+            valid_ratings = 0
+            for handler in handlers:
+                rating = handler.get("rating", 0)
+                if isinstance(rating, (int, float)) and 0 <= rating <= 5:
+                    valid_ratings += 1
             
-            if response.status_code == 422:  # Validation error
-                self.log_test("POST /admin/send-email validates empty body", True, 
-                            "Correctly rejects empty body")
-            elif response.status_code == 400:
-                self.log_test("POST /admin/send-email validates empty body", True, 
-                            "Correctly rejects empty body (400 error)")
-            else:
-                self.log_test("POST /admin/send-email validates empty body", False, 
-                            f"Expected validation error, got HTTP {response.status_code}")
-        except Exception as e:
-            self.log_test("POST /admin/send-email validates empty body", False, f"Exception: {str(e)}")
+            rating_percentage = (valid_ratings / len(handlers)) * 100
+            self.log_result(
+                "Handler Ratings Validity",
+                rating_percentage >= 95,  # 95% should have valid ratings
+                f"{valid_ratings}/{len(handlers)} handlers ({rating_percentage:.1f}%) have valid ratings (0-5)",
+                {"threshold": "95%", "actual": f"{rating_percentage:.1f}%"}
+            )
+            
+            # Test availability status
+            handlers_with_availability = sum(1 for h in handlers if isinstance(h.get("available"), bool))
+            availability_percentage = (handlers_with_availability / len(handlers)) * 100
+            self.log_result(
+                "Handler Availability Status",
+                availability_percentage >= 95,  # 95% should have boolean availability
+                f"{handlers_with_availability}/{len(handlers)} handlers ({availability_percentage:.1f}%) have boolean availability status",
+                {"threshold": "95%", "actual": f"{availability_percentage:.1f}%"}
+            )
+    
+    def test_advanced_search_scenarios(self):
+        """Test advanced search scenarios"""
+        print("\n🔍 ADVANCED SEARCH SCENARIOS")
+        print("=" * 50)
         
-        # Test 6: Invalid recipient_type should fail
-        try:
-            email_data = {
-                "recipient_type": "invalid_type",
-                "subject": "Test Subject",
-                "body": "Test body",
-                "send_to_all": True
-            }
-            
-            response = self.session.post(f"{BACKEND_URL}/admin/send-email", 
-                                       json=email_data,
-                                       headers={"Content-Type": "application/json"})
-            
-            if response.status_code in [400, 422]:
-                self.log_test("POST /admin/send-email validates recipient_type", True, 
-                            "Correctly rejects invalid recipient_type")
+        # Test handler filtering by skill
+        response = self.make_request("/handlers", params={"skill": "Cleaning"})
+        if response and "error" not in response:
+            if isinstance(response, list):
+                cleaning_handlers = len(response)
+                self.log_result(
+                    "Handler Skill Filtering",
+                    True,
+                    f"Successfully filtered {cleaning_handlers} handlers with 'Cleaning' skill"
+                )
             else:
-                self.log_test("POST /admin/send-email validates recipient_type", False, 
-                            f"Expected validation error, got HTTP {response.status_code}")
-        except Exception as e:
-            self.log_test("POST /admin/send-email validates recipient_type", False, f"Exception: {str(e)}")
+                self.log_result(
+                    "Handler Skill Filtering",
+                    False,
+                    "Response is not a list"
+                )
+        else:
+            self.log_result(
+                "Handler Skill Filtering",
+                False,
+                "Failed to filter handlers by skill"
+            )
+        
+        # Test handler availability filtering
+        response = self.make_request("/handlers", params={"available": "true"})
+        if response and "error" not in response:
+            if isinstance(response, list):
+                available_handlers = len(response)
+                self.log_result(
+                    "Handler Availability Filtering",
+                    True,
+                    f"Successfully filtered {available_handlers} available handlers"
+                )
+            else:
+                self.log_result(
+                    "Handler Availability Filtering",
+                    False,
+                    "Response is not a list"
+                )
+        else:
+            self.log_result(
+                "Handler Availability Filtering",
+                False,
+                "Failed to filter handlers by availability"
+            )
     
     def run_all_tests(self):
-        """Run all Admin Dashboard API tests"""
-        print("🚀 STARTING ADMIN DASHBOARD BACKEND API TESTING")
-        print("=" * 80)
+        """Run all search and advanced search tests"""
+        print("🚀 STARTING SEARCH & ADVANCED SEARCH API TESTING")
+        print("=" * 60)
         print(f"Backend URL: {BACKEND_URL}")
         print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print("=" * 80)
+        print("=" * 60)
         
-        # Run tests in priority order
-        self.test_app_settings_api()      # Priority: HIGH
-        self.test_send_email_api()        # Priority: HIGH  
-        self.test_chat_history_api()      # Priority: MEDIUM
+        # PRIORITY 1: Core Search APIs
+        services = self.test_services_endpoint()
+        categories = self.test_categories_endpoint()
+        handlers = self.test_handlers_endpoint()
+        
+        # PRIORITY 2: Search Filtering
+        if categories:
+            self.test_category_filtering(categories)
+        
+        # PRIORITY 3: Data Quality
+        if services and handlers:
+            self.test_data_quality(services, handlers)
+        
+        # Advanced Search Scenarios
+        self.test_advanced_search_scenarios()
         
         # Print summary
-        print("\n" + "=" * 80)
-        print("📊 ADMIN DASHBOARD API TESTING SUMMARY")
-        print("=" * 80)
+        self.print_summary()
+    
+    def print_summary(self):
+        """Print test summary"""
+        print("\n" + "=" * 60)
+        print("📊 TEST SUMMARY")
+        print("=" * 60)
         
         success_rate = (self.passed_tests / self.total_tests * 100) if self.total_tests > 0 else 0
         
         print(f"Total Tests: {self.total_tests}")
-        print(f"Passed: {self.passed_tests}")
-        print(f"Failed: {self.total_tests - self.passed_tests}")
+        print(f"Passed: {self.passed_tests} ✅")
+        print(f"Failed: {self.failed_tests} ❌")
         print(f"Success Rate: {success_rate:.1f}%")
         
+        if self.failed_tests > 0:
+            print(f"\n❌ FAILED TESTS ({self.failed_tests}):")
+            for result in self.results:
+                if "❌ FAIL" in result["status"]:
+                    print(f"  • {result['test']}: {result['message']}")
+        
+        print("\n" + "=" * 60)
+        
+        # Determine overall status
         if success_rate >= 90:
-            print("🎉 EXCELLENT: Admin Dashboard APIs are working great!")
+            print("🎉 OVERALL STATUS: EXCELLENT - Search APIs are fully functional!")
         elif success_rate >= 75:
-            print("✅ GOOD: Admin Dashboard APIs are mostly working")
+            print("✅ OVERALL STATUS: GOOD - Search APIs are mostly functional with minor issues")
         elif success_rate >= 50:
-            print("⚠️  MODERATE: Some Admin Dashboard APIs need attention")
+            print("⚠️  OVERALL STATUS: NEEDS ATTENTION - Several search API issues found")
         else:
-            print("❌ CRITICAL: Major issues with Admin Dashboard APIs")
-        
-        # Show failed tests
-        failed_tests = [test for test in self.test_results if not test["passed"]]
-        if failed_tests:
-            print("\n❌ FAILED TESTS:")
-            for test in failed_tests:
-                print(f"  • {test['test']}: {test['details']}")
-        
-        print("=" * 80)
-        return success_rate >= 75
+            print("❌ OVERALL STATUS: CRITICAL - Major search API issues require immediate attention")
+
+def main():
+    """Main test execution"""
+    tester = SearchAPITester()
+    tester.run_all_tests()
+    
+    # Return exit code based on results
+    if tester.failed_tests == 0:
+        sys.exit(0)  # All tests passed
+    else:
+        sys.exit(1)  # Some tests failed
 
 if __name__ == "__main__":
-    tester = AdminDashboardTester()
-    success = tester.run_all_tests()
-    sys.exit(0 if success else 1)
+    main()
