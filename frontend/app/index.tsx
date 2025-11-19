@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Index() {
-  const { user, loading, login, register } = useAuth();
+  const { user, loading, login, partnerLogin, register, partnerRegister } = useAuth();
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
