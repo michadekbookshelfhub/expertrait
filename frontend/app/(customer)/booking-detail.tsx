@@ -177,6 +177,24 @@ export default function BookingDetail() {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {/* View Reviews Button */}
+              <TouchableOpacity
+                style={styles.viewReviewsButton}
+                onPress={() => router.push({
+                  pathname: '/(customer)/handler-reviews',
+                  params: { 
+                    handlerId: handler.id,
+                    handlerName: handler.name
+                  }
+                })}
+              >
+                <Ionicons name="star-outline" size={20} color="#FF6B00" />
+                <Text style={styles.viewReviewsText}>
+                  View All Reviews ({handler.review_count})
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color="#FF6B00" />
+              </TouchableOpacity>
             </View>
           </View>
         )}
