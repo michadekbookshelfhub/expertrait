@@ -78,11 +78,14 @@ export default function Home() {
   };
 
   const handleSearchSubmit = () => {
-    if (searchQuery.trim()) {
-      // Navigate to search results or filter services
-      // For now, just show alert
-      Alert.alert('Search', `Searching for: ${searchQuery}`);
-    }
+    router.push({
+      pathname: '/(customer)/advanced-search',
+      params: { query: searchQuery }
+    });
+  };
+
+  const handleSearchFocus = () => {
+    router.push('/(customer)/advanced-search');
   };
 
   const handleAddMultipleToCart = (servicesToAdd: Service[]) => {
