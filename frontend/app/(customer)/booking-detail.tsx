@@ -430,4 +430,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  viewReviewsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  viewReviewsText: {
+    flex: 1,
+    color: '#FF6B00',
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
 });
