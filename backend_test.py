@@ -13,7 +13,7 @@ import sys
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://skill-nexus-24.preview.emergentagent.com/api"
+BACKEND_URL = "https://homeservices-app.preview.emergentagent.com/api"
 
 class AdminDashboardTester:
     def __init__(self):
