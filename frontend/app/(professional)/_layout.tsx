@@ -54,15 +54,7 @@ export default function ProfessionalLayout() {
       />
       {/* Hide other professional screens from tab bar */}
       <Tabs.Screen
-        name="jobs"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
         name="my-skills"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="job-detail"
         options={{ href: null }}
       />
       <Tabs.Screen
