@@ -8,13 +8,25 @@ interface CartItem {
   category: string;
 }
 
+interface BookingPreferences {
+  date: Date | null;
+  startTime: Date | null;
+  endTime: Date | null;
+  address: string;
+  notes: string;
+}
+
 interface CartContextType {
   cart: CartItem[];
+  bookingPreferences: BookingPreferences;
   addToCart: (item: CartItem) => void;
   removeFromCart: (itemId: string) => void;
   clearCart: () => void;
   getCartTotal: () => number;
   getCartCount: () => number;
+  setBookingPreferences: (preferences: Partial<BookingPreferences>) => void;
+  hasBookingPreferences: () => boolean;
+  clearBookingPreferences: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
