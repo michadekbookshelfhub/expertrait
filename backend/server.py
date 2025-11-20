@@ -2222,7 +2222,7 @@ class PartnerCreate(BaseModel):
     company_address: str
     license_number: str
     license_document: Optional[str] = None  # Base64 encoded
-    healthcare_category: str  # "Baby Sitter", "Dog Sitter", "Mental Support", "Domiciliary Care", "Support Worker"
+    healthcare_category: str  # "Child Minding", "Dog Sitter", "Mental Support", "Domiciliary Care", "Support Worker"
 
 class PartnerResponse(BaseModel):
     id: str
