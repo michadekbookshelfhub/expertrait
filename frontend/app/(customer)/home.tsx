@@ -117,7 +117,7 @@ export default function Home() {
         </View>
         <TouchableOpacity 
           style={styles.cartButton}
-          onPress={() => router.push('/(customer)/enhanced-checkout')}
+          onPress={() => router.push('/(customer)/cart')}
         >
           <Ionicons name="cart" size={24} color="#FF6B00" />
           {getCartCount() > 0 && (
