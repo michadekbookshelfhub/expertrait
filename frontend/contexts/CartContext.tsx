@@ -41,6 +41,13 @@ export const useCart = () => {
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [bookingPreferences, setBookingPreferencesState] = useState<BookingPreferences>({
+    date: null,
+    startTime: null,
+    endTime: null,
+    address: '',
+    notes: '',
+  });
 
   const addToCart = (item: CartItem) => {
     // Check if item already in cart
@@ -70,15 +77,45 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return cart.length;
   };
 
+  const setBookingPreferences = (preferences: Partial<BookingPreferences>) => {
+    setBookingPreferencesState(prev => ({
+      ...prev,
+      ...preferences,
+    }));
+  };
+
+  const hasBookingPreferences = () => {
+    return !!(
+      bookingPreferences.date &&
+      bookingPreferences.startTime &&
+      bookingPreferences.address &&
+      bookingPreferences.address.trim().length > 0
+    );
+  };
+
+  const clearBookingPreferences = () => {
+    setBookingPreferencesState({
+      date: null,
+      startTime: null,
+      endTime: null,
+      address: '',
+      notes: '',
+    });
+  };
+
   return (
     <CartContext.Provider
       value={{
         cart,
+        bookingPreferences,
         addToCart,
         removeFromCart,
         clearCart,
         getCartTotal,
         getCartCount,
+        setBookingPreferences,
+        hasBookingPreferences,
+        clearBookingPreferences,
       }}
     >
       {children}
