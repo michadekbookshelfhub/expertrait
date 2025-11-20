@@ -228,6 +228,25 @@ export default function Home() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Floating Book Now Button */}
+      {cart.length > 0 && (
+        <TouchableOpacity
+          style={styles.bookNowButton}
+          onPress={handleBookNow}
+          activeOpacity={0.9}
+        >
+          <View style={styles.bookNowContent}>
+            <View>
+              <Text style={styles.bookNowText}>Book Now</Text>
+              <Text style={styles.bookNowSubtext}>
+                {cart.length} service{cart.length !== 1 ? 's' : ''} • £{getCartTotal().toFixed(2)}
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={32} color="#FFF" />
+          </View>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
