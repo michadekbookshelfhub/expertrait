@@ -90,7 +90,7 @@ export const api = {
   },
 
   updateAvailability: async (professionalId: string, available: boolean) => {
-    const response = await fetch(`${API_URL}/api/professionals/${professionalId}/availability`, {
+    const response = await fetch(`${API_URL}/api/handlers/${professionalId}/availability`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ available }),
