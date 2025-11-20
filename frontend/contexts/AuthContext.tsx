@@ -76,6 +76,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const data = await response.json();
     setUser(data.user);
     await AsyncStorage.setItem('@user', JSON.stringify(data.user));
+    
+    // Register for push notifications after successful login
+    try {
+      await notificationService.savePushTokenToBackend(
+        data.user.id,
+        data.user.user_type === 'handler' ? 'professional' : data.user.user_type
+      );
+    } catch (error) {
+      console.log('Failed to register push notifications:', error);
+      // Don't throw error, as login was successful
+    }
   };
 
   const partnerLogin = async (email: string, password: string) => {
