@@ -37,7 +37,22 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadBookings();
+    loadAvailability();
   }, []);
+
+  const loadAvailability = async () => {
+    if (!user) return;
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${API_URL}/api/handlers/${user.id}/availability`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailable(data.available || false);
+      }
+    } catch (error) {
+      console.error('Failed to load availability:', error);
+    }
+  };
 
   const loadBookings = async () => {
     if (!user) return;
