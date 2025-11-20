@@ -3793,6 +3793,131 @@ async def get_email_logs(limit: int = 50):
     logs = await db.email_logs.find({}).sort("sent_at", -1).limit(limit).to_list(limit)
     return {"logs": [serialize_doc(log) for log in logs], "total": len(logs)}
 
+
+# ======================
+# PUSH NOTIFICATIONS
+# ======================
+
+class PushTokenRegister(BaseModel):
+    user_id: str
+    user_type: str  # "customer", "professional", "partner"
+    push_token: str
+    platform: str  # "ios" or "android"
+
+@api_router.post("/notifications/register")
+async def register_push_token(token_data: PushTokenRegister):
+    """Register a push notification token for a user"""
+    try:
+        # Upsert push token
+        await db.push_tokens.update_one(
+            {"user_id": token_data.user_id},
+            {
+                "$set": {
+                    "user_type": token_data.user_type,
+                    "push_token": token_data.push_token,
+                    "platform": token_data.platform,
+                    "updated_at": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+        
+        print(f"✅ Push token registered for {token_data.user_type} user: {token_data.user_id}")
+        return {"message": "Push token registered successfully"}
+    except Exception as e:
+        print(f"❌ Failed to register push token: {e}")
+        raise HTTPException(status_code=500, detail="Failed to register push token")
+
+async def send_push_notification(user_id: str, title: str, body: str, data: Optional[Dict] = None):
+    """Send a push notification to a user"""
+    try:
+        # Get user's push token
+        token_doc = await db.push_tokens.find_one({"user_id": user_id})
+        
+        if not token_doc:
+            print(f"⚠️ No push token found for user: {user_id}")
+            return False
+        
+        push_token = token_doc.get("push_token")
+        
+        # This would integrate with Expo Push Notification service
+        # For now, we'll log it (actual implementation requires Expo Push API)
+        print(f"📱 PUSH NOTIFICATION TO {user_id}")
+        print(f"   Token: {push_token}")
+        print(f"   Title: {title}")
+        print(f"   Body: {body}")
+        print(f"   Data: {data}")
+        
+        # Store notification in database for history
+        await db.notifications.insert_one({
+            "user_id": user_id,
+            "title": title,
+            "body": body,
+            "data": data or {},
+            "sent_at": datetime.utcnow(),
+            "read": False
+        })
+        
+        # TODO: Implement actual Expo Push Notification API call
+        # import requests
+        # response = requests.post(
+        #     'https://exp.host/--/api/v2/push/send',
+        #     json={
+        #         'to': push_token,
+        #         'title': title,
+        #         'body': body,
+        #         'data': data or {}
+        #     }
+        # )
+        
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send push notification: {e}")
+        return False
+
+@api_router.get("/notifications/{user_id}")
+async def get_user_notifications(user_id: str, limit: int = 50):
+    """Get notifications for a user"""
+    notifications = await db.notifications.find(
+        {"user_id": user_id}
+    ).sort("sent_at", -1).limit(limit).to_list(limit)
+    
+    return {
+        "notifications": [serialize_doc(n) for n in notifications],
+        "total": len(notifications),
+        "unread": sum(1 for n in notifications if not n.get("read", False))
+    }
+
+@api_router.post("/notifications/{notification_id}/read")
+async def mark_notification_as_read(notification_id: str):
+    """Mark a notification as read"""
+    if not ObjectId.is_valid(notification_id):
+        raise HTTPException(status_code=400, detail="Invalid notification ID")
+    
+    result = await db.notifications.update_one(
+        {"_id": ObjectId(notification_id)},
+        {"$set": {"read": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification marked as read"}
+
+@api_router.post("/notifications/{user_id}/read-all")
+async def mark_all_notifications_as_read(user_id: str):
+    """Mark all notifications as read for a user"""
+    result = await db.notifications.update_many(
+        {"user_id": user_id, "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    return {
+        "message": "All notifications marked as read",
+        "count": result.modified_count
+    }
+
+
 app.include_router(api_router)
 
 # Photo Upload
