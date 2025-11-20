@@ -35,7 +35,7 @@ interface Service {
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
-  const { addToCart, getCartCount } = useCart();
+  const { addToCart, getCartCount, cart, hasBookingPreferences } = useCart();
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
