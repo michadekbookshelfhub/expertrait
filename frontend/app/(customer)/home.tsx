@@ -99,6 +99,29 @@ export default function Home() {
     });
   };
 
+  const handleBookNow = () => {
+    if (cart.length === 0) {
+      Alert.alert('Empty Cart', 'Please add services to your cart before booking');
+      return;
+    }
+
+    // Check if booking preferences are set
+    if (!hasBookingPreferences()) {
+      // Navigate to cart to complete booking details
+      Alert.alert(
+        'Complete Booking Details',
+        'Please set your booking date, time, and address before proceeding to checkout',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Continue', onPress: () => router.push('/(customer)/cart') }
+        ]
+      );
+    } else {
+      // Preferences are set, go directly to checkout
+      router.push('/(customer)/enhanced-checkout');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
