@@ -134,8 +134,17 @@ export default function Dashboard() {
     try {
       await api.updateAvailability(user.id, value);
       setAvailable(value);
+      Alert.alert(
+        'Availability Updated', 
+        value 
+          ? 'You are now available to receive new job requests' 
+          : 'You are now unavailable. You won\'t receive new job requests'
+      );
     } catch (error) {
-      Alert.alert('Error', 'Failed to update availability');
+      console.error('Failed to update availability:', error);
+      Alert.alert('Error', 'Failed to update availability. Please try again.');
+      // Revert the toggle if it failed
+      setAvailable(!value);
     } finally {
       setUpdatingAvailability(false);
     }
