@@ -41,22 +41,85 @@ export default function Index() {
   const [healthcareCategory, setHealthcareCategory] = useState('');
 
   const healthcareCategories = [
-    'Baby Sitter',
+    'Child Minding',
     'Dog Sitter',
     'Mental Support Worker',
     'Domiciliary Care Worker',
     'Support Worker (Sit-in)'
   ];
 
+  // Define health services group
+  const healthServices = [
+    'Pet Care',
+    'Dog Sitter',
+    'Child Minding',
+    'Mental Support Worker',
+    'Domiciliary Care Worker',
+    'Support Worker (Sit-in)',
+    'Care Worker'
+  ];
+
   // Available service categories for professionals
   const serviceCategories = [
     'Cleaning', 'Plumbing', 'Electrical', 'Painting', 'Gardening',
     'Carpentry', 'HVAC', 'Appliance Repair', 'Moving', 'Pet Care',
-    'Baby Sitter', 'Dog Sitter', 'Mental Support Worker', 
-    'Domiciliary Care Worker', 'Support Worker (Sit-in)'
+    'Child Minding', 'Dog Sitter', 'Mental Support Worker', 
+    'Domiciliary Care Worker', 'Support Worker (Sit-in)', 'Care Worker'
   ];
 
+  const isHealthService = (skill: string) => {
+    return healthServices.includes(skill);
+  };
+
+  const canSelectSkill = (skill: string) => {
+    // If already selected, can always deselect
+    if (selectedSkills.includes(skill)) {
+      return true;
+    }
+
+    // Maximum 3 skills total
+    if (selectedSkills.length >= 3) {
+      return false;
+    }
+
+    const healthSkillsCount = selectedSkills.filter(s => isHealthService(s)).length;
+    const nonHealthSkillsCount = selectedSkills.length - healthSkillsCount;
+    const hasHealthService = healthSkillsCount > 0;
+
+    // If trying to add a health service
+    if (isHealthService(skill)) {
+      // If no health services selected yet, can add (up to 3 total)
+      if (!hasHealthService) {
+        return true;
+      }
+      // If health services already selected, can add up to 2 health services total
+      return healthSkillsCount < 2;
+    } else {
+      // If trying to add a non-health service
+      // If health services are selected, can only add 1 non-health service
+      if (hasHealthService) {
+        return nonHealthSkillsCount < 1;
+      }
+      // If no health services selected, can add freely (up to 3 total)
+      return true;
+    }
+  };
+
   const toggleSkill = (skill: string) => {
+    if (!canSelectSkill(skill) && !selectedSkills.includes(skill)) {
+      const healthSkillsCount = selectedSkills.filter(s => isHealthService(s)).length;
+      const hasHealthService = healthSkillsCount > 0;
+      
+      if (selectedSkills.length >= 3) {
+        Alert.alert('Maximum Skills', 'You can select a maximum of 3 skills.');
+      } else if (hasHealthService && isHealthService(skill) && healthSkillsCount >= 2) {
+        Alert.alert('Health Services Limit', 'You can select a maximum of 2 health services.');
+      } else if (hasHealthService && !isHealthService(skill)) {
+        Alert.alert('Skill Limit', 'When health services are selected, you can only add 1 non-health service.');
+      }
+      return;
+    }
+
     setSelectedSkills(prev => 
       prev.includes(skill) 
         ? prev.filter(s => s !== skill)
