@@ -728,6 +728,14 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '500',
   },
+  skillChipDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E0E0E0',
+    opacity: 0.5,
+  },
+  skillChipTextDisabled: {
+    color: '#999',
+  },
   selectedCountText: {
     fontSize: 12,
     color: '#FF6B00',
