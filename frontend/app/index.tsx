@@ -358,31 +358,45 @@ export default function Index() {
               {userType === 'professional' && (
                 <View style={styles.skillsContainer}>
                   <Text style={styles.inputLabel}>Skills & Services</Text>
-                  <Text style={styles.helperText}>Select the services you can provide (select at least one)</Text>
+                  <Text style={styles.helperText}>
+                    Select up to 3 skills. If selecting health services, max 2 health + 1 other.
+                  </Text>
                   <View style={styles.skillsGrid}>
-                    {serviceCategories.map((skill) => (
-                      <TouchableOpacity
-                        key={skill}
-                        style={[
-                          styles.skillChip,
-                          selectedSkills.includes(skill) && styles.skillChipActive,
-                        ]}
-                        onPress={() => toggleSkill(skill)}
-                      >
-                        <Text
+                    {serviceCategories.map((skill) => {
+                      const canSelect = canSelectSkill(skill);
+                      const isSelected = selectedSkills.includes(skill);
+                      const isDisabled = !canSelect && !isSelected;
+                      
+                      return (
+                        <TouchableOpacity
+                          key={skill}
                           style={[
-                            styles.skillChipText,
-                            selectedSkills.includes(skill) && styles.skillChipTextActive,
+                            styles.skillChip,
+                            isSelected && styles.skillChipActive,
+                            isDisabled && styles.skillChipDisabled,
                           ]}
+                          onPress={() => toggleSkill(skill)}
+                          disabled={isDisabled}
                         >
-                          {skill}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                          <Text
+                            style={[
+                              styles.skillChipText,
+                              isSelected && styles.skillChipTextActive,
+                              isDisabled && styles.skillChipTextDisabled,
+                            ]}
+                          >
+                            {skill}
+                            {isHealthService(skill) && ' 🏥'}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                   {selectedSkills.length > 0 && (
                     <Text style={styles.selectedCountText}>
-                      {selectedSkills.length} skill{selectedSkills.length !== 1 ? 's' : ''} selected
+                      {selectedSkills.length}/3 skill{selectedSkills.length !== 1 ? 's' : ''} selected
+                      {selectedSkills.filter(s => isHealthService(s)).length > 0 && 
+                        ` (${selectedSkills.filter(s => isHealthService(s)).length} health)`}
                     </Text>
                   )}
                 </View>
