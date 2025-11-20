@@ -3096,7 +3096,7 @@ async def health_check():
 # ==================== Partner System Routes ====================
 
 HEALTHCARE_CATEGORIES = [
-    "Baby Sitter",
+    "Child Minding",
     "Dog Sitter", 
     "Mental Support Worker",
     "Domiciliary Care Worker",
