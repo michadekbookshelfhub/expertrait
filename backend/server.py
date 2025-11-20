@@ -3178,6 +3178,7 @@ async def partner_login(login: PartnerLogin):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Check if approved
+    print(f"🔍 Partner status check: status={partner.get('status')}, type={type(partner.get('status'))}")
     if partner.get("status") != "approved":
         raise HTTPException(
             status_code=403,
