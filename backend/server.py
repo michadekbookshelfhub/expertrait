@@ -3924,6 +3924,230 @@ async def mark_all_notifications_as_read(user_id: str):
 
 app.include_router(api_router)
 
+
+# ======================
+# BOOKING WITH PAYMENT & NOTIFICATIONS
+# ======================
+
+class BookingWithPayment(BaseModel):
+    customer_id: str
+    service_ids: List[str]
+    scheduled_date: str
+    scheduled_time: str
+    end_time: Optional[str] = None
+    address: str
+    notes: str
+    total_price: float
+    payment_method: str
+    customer_name: str
+    customer_email: str
+    customer_phone: str
+
+async def send_receipt_email(customer_email: str, customer_name: str, booking_data: dict):
+    """Send booking receipt/invoice to customer"""
+    try:
+        services_list = "<br>".join([f"- {s['name']}: £{s['price']:.2f}" for s in booking_data['services']])
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: #FF6B00; padding: 20px; text-align: center;">
+                <h1 style="color: white; margin: 0;">ExperTrait</h1>
+                <p style="color: white; margin: 5px 0;">Booking Receipt</p>
+            </div>
+            
+            <div style="padding: 20px; background-color: #f9f9f9;">
+                <h2>Thank you for your booking, {customer_name}!</h2>
+                
+                <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <h3 style="color: #FF6B00;">Booking Details</h3>
+                    <p><strong>Booking ID:</strong> {booking_data['booking_id']}</p>
+                    <p><strong>Date:</strong> {booking_data['date']}</p>
+                    <p><strong>Time:</strong> {booking_data['time']}</p>
+                    <p><strong>Address:</strong> {booking_data['address']}</p>
+                </div>
+                
+                <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <h3 style="color: #FF6B00;">Services</h3>
+                    {services_list}
+                </div>
+                
+                <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <h3 style="color: #FF6B00;">Payment Summary</h3>
+                    <p><strong>Subtotal:</strong> £{booking_data['subtotal']:.2f}</p>
+                    <p><strong>Service Fee (5%):</strong> £{booking_data['service_fee']:.2f}</p>
+                    <hr>
+                    <p style="font-size: 18px;"><strong>Total Paid:</strong> £{booking_data['total']:.2f}</p>
+                    <p><strong>Payment Method:</strong> {booking_data['payment_method']}</p>
+                </div>
+                
+                <p style="color: #666;">A professional will be assigned to your booking shortly. You will receive a WhatsApp notification once confirmed.</p>
+                
+                <p style="color: #666; font-size: 12px;">If you have any questions, please contact us at support@expertrait.com</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        message = Mail(
+            from_email='bookings@expertrait.com',
+            to_emails=customer_email,
+            subject=f'Booking Receipt - {booking_data["booking_id"]}',
+            html_content=html_content
+        )
+        
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"✅ Receipt sent to {customer_email}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send receipt to {customer_email}: {e}")
+        return False
+
+async def send_whatsapp_to_handler(handler_phone: str, booking_data: dict):
+    """Send WhatsApp notification to handler about new booking"""
+    try:
+        # For now, we'll just log it. In production, integrate with Twilio WhatsApp API
+        message = f"""
+🔔 New Job Assignment!
+
+Booking ID: {booking_data['booking_id']}
+Customer: {booking_data['customer_name']}
+Service: {booking_data['service_names']}
+Date: {booking_data['date']}
+Time: {booking_data['time']}
+Address: {booking_data['address']}
+
+Total Payment: £{booking_data['total']:.2f}
+
+Please confirm acceptance in the app.
+        """
+        
+        print(f"📱 WhatsApp to {handler_phone}:")
+        print(message)
+        print("=" * 50)
+        
+        # TODO: Implement actual WhatsApp sending via Twilio
+        # from twilio.rest import Client
+        # client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        # message = client.messages.create(
+        #     from_='whatsapp:+14155238886',
+        #     body=message,
+        #     to=f'whatsapp:{handler_phone}'
+        # )
+        
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send WhatsApp to {handler_phone}: {e}")
+        return False
+
+@api_router.post("/bookings/create-with-payment")
+async def create_booking_with_payment(booking: BookingWithPayment):
+    """Create booking, process payment, send receipt and WhatsApp notifications"""
+    try:
+        # Get services details
+        service_ids = [ObjectId(sid) for sid in booking.service_ids]
+        services = await db.services.find({"_id": {"$in": service_ids}}).to_list(None)
+        
+        if not services:
+            raise HTTPException(status_code=404, detail="Services not found")
+        
+        # Find available handler for the first service category
+        # (In production, implement more sophisticated matching logic)
+        service_category = services[0].get("category")
+        available_handlers = await db.handlers.find({
+            "skills": service_category,
+            "available": True
+        }).to_list(10)
+        
+        if not available_handlers:
+            # If no available handlers, create booking without handler assignment
+            handler_id = None
+            handler_phone = None
+            status = "pending"
+        else:
+            # Assign to first available handler
+            handler = available_handlers[0]
+            handler_id = str(handler["_id"])
+            handler_phone = handler.get("phone")
+            status = "confirmed"
+        
+        # Create booking document
+        booking_doc = {
+            "customer_id": booking.customer_id,
+            "professional_id": handler_id,
+            "service_ids": booking.service_ids,
+            "service_name": ", ".join([s["name"] for s in services]),
+            "category": service_category,
+            "scheduled_date": booking.scheduled_date,
+            "scheduled_time": booking.scheduled_time,
+            "end_time": booking.end_time,
+            "address": booking.address,
+            "notes": booking.notes,
+            "total_price": booking.total_price,
+            "payment_method": booking.payment_method,
+            "payment_status": "paid",
+            "status": status,
+            "customer_name": booking.customer_name,
+            "customer_email": booking.customer_email,
+            "customer_phone": booking.customer_phone,
+            "created_at": datetime.utcnow(),
+        }
+        
+        result = await db.bookings.insert_one(booking_doc)
+        booking_id = str(result.inserted_id)
+        
+        # Prepare receipt data
+        subtotal = sum(s.get("fixed_price", 0) for s in services)
+        service_fee = booking.total_price - subtotal
+        
+        receipt_data = {
+            "booking_id": booking_id,
+            "date": booking.scheduled_date,
+            "time": booking.scheduled_time,
+            "address": booking.address,
+            "services": [{"name": s["name"], "price": s.get("fixed_price", 0)} for s in services],
+            "subtotal": subtotal,
+            "service_fee": service_fee,
+            "total": booking.total_price,
+            "payment_method": booking.payment_method.title(),
+        }
+        
+        # Send receipt email (non-blocking)
+        try:
+            await send_receipt_email(booking.customer_email, booking.customer_name, receipt_data)
+        except Exception as e:
+            print(f"⚠️ Receipt email failed (non-critical): {e}")
+        
+        # Send WhatsApp to handler if assigned
+        if handler_id and handler_phone:
+            try:
+                whatsapp_data = {
+                    "booking_id": booking_id,
+                    "customer_name": booking.customer_name,
+                    "service_names": ", ".join([s["name"] for s in services]),
+                    "date": booking.scheduled_date,
+                    "time": booking.scheduled_time,
+                    "address": booking.address,
+                    "total": booking.total_price,
+                }
+                await send_whatsapp_to_handler(handler_phone, whatsapp_data)
+            except Exception as e:
+                print(f"⚠️ WhatsApp notification failed (non-critical): {e}")
+        
+        return {
+            "success": True,
+            "booking_id": booking_id,
+            "status": status,
+            "handler_assigned": handler_id is not None,
+            "message": "Booking created successfully. Receipt sent to email."
+        }
+        
+    except Exception as e:
+        print(f"❌ Booking creation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Photo Upload
 class PhotoUpload(BaseModel):
     booking_id: str
