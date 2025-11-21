@@ -108,8 +108,8 @@ export default function CartScreen() {
       notes: notes.trim(),
     });
 
-    // Navigate to checkout
-    router.push('/(customer)/enhanced-checkout');
+    // Navigate to payment page
+    router.push('/(customer)/payment');
   };
 
   if (cart.length === 0) {
