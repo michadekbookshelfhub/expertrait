@@ -21,15 +21,8 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-from pymongo.server_api import ServerApi
-import certifi
-
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(
-    mongo_url,
-    server_api=ServerApi('1'),
-    tlsCAFile=certifi.where()
-)
+client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Environment variables
