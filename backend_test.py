@@ -13,7 +13,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://homeservices-app.preview.emergentagent.com/api"
+BACKEND_URL = "https://expertrait-dev.preview.emergentagent.com/api"
 TIMEOUT = 30
 
 class SearchAPITester:

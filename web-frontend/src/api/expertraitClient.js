@@ -1,5 +1,5 @@
 // ExperTrait Backend Client
-const API_URL = 'https://homeservices-app.preview.emergentagent.com/api';
+const API_URL = 'https://expertrait-dev.preview.emergentagent.com/api';
 
 export const expertraitClient = {
   // Services
